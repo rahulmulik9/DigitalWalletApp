@@ -35,7 +35,7 @@ public class UserService {
         Wallet wallet = Wallet.builder()
                 .user(user)
                 .balance(BigDecimal.ZERO)
-                .currency("USD")
+                .currency("INR")
                 .build();
 
         user.setWallet(wallet);

@@ -32,7 +32,7 @@ public class Wallet {
 
     @Column(nullable = false, length = 3)
     @Builder.Default
-    private String currency = "USD";
+    private String currency = "INR";
 
     // Optimistic locking — prevents two concurrent transfers from
     // corrupting the balance with a lost update.
