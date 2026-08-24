@@ -1,10 +1,7 @@
 package com.rahul.DigitalWallet.service;
 
 import com.rahul.DigitalWallet.dto.TransferRequest;
-import com.rahul.DigitalWallet.entity.Transaction;
-import com.rahul.DigitalWallet.entity.TransactionStatus;
-import com.rahul.DigitalWallet.entity.TransactionType;
-import com.rahul.DigitalWallet.entity.Wallet;
+import com.rahul.DigitalWallet.entity.*;
 import com.rahul.DigitalWallet.exception.InsufficientBalanceException;
 import com.rahul.DigitalWallet.exception.ResourceNotFoundException;
 import com.rahul.DigitalWallet.repository.TransactionRepository;
@@ -14,6 +11,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -69,6 +69,25 @@ public class TransferService {
     }
 
     public Page<Transaction> getHistory(Long walletId, Pageable pageable) {
-        return transactionRepository.findAllByWalletId(walletId, pageable);
+       // return transactionRepository.findAllByWalletId(walletId, pageable);
+        Page<Transaction> transactions =  transactionRepository.findAllByWalletId(walletId, pageable);
+
+//        // Get first Transaction
+//        Transaction transaction = transactions.getContent().get(1);
+//
+//        // Get wallets from that Transaction
+//        Wallet fromWallet = transaction.getFromWallet();
+//        Wallet toWallet = transaction.getToWallet();
+//
+//        Long id = fromWallet.getId();
+//        User user = fromWallet.getUser();
+//        BigDecimal balance = fromWallet.getBalance();
+//        String currency = fromWallet.getCurrency();
+//        Long version = fromWallet.getVersion();
+//        LocalDateTime createdAt = fromWallet.getCreatedAt();
+//        LocalDateTime updatedAt = fromWallet.getUpdatedAt();
+
+        // Put breakpoint here
+        return transactions;
     }
 }
