@@ -6,15 +6,46 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:8080" },
-    { "key": "walletId", "value": "1" },
-    { "key": "otherWalletId", "value": "2" },
-    { "key": "fromWalletId", "value": "1" },
-    { "key": "toWalletId", "value": "2" },
-    { "key": "accessToken", "value": "" },
-    { "key": "refreshToken", "value": "" },
-    { "key": "adminAccessToken", "value": "" },
-    { "key": "adminRefreshToken", "value": "" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "walletId",
+      "value": "1"
+    },
+    {
+      "key": "otherWalletId",
+      "value": "2"
+    },
+    {
+      "key": "fromWalletId",
+      "value": "1"
+    },
+    {
+      "key": "toWalletId",
+      "value": "2"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    },
+    {
+      "key": "adminAccessToken",
+      "value": ""
+    },
+    {
+      "key": "adminRefreshToken",
+      "value": ""
+    },
+    {
+      "key": "logoutTestToken",
+      "value": ""
+    }
   ],
   "item": [
     {
@@ -28,7 +59,10 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
@@ -36,8 +70,14 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/users/register",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "users", "register"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "register"
+                  ]
                 }
               }
             },
@@ -54,13 +94,18 @@
                       "});",
                       "",
                       "const jsonData = pm.response.json();",
-                      "if (jsonData.accessToken) {",
-                      "    pm.collectionVariables.set('accessToken', jsonData.accessToken);",
-                      "    pm.collectionVariables.set('refreshToken', jsonData.refreshToken);",
-                      "    console.log('Tokens saved.');",
-                      "} else {",
-                      "    console.warn('No accessToken in response.');",
-                      "}"
+                      "",
+                      "pm.expect(jsonData.accessToken).to.exist;",
+                      "pm.expect(jsonData.refreshToken).to.exist;",
+                      "",
+                      "pm.collectionVariables.set('accessToken', jsonData.accessToken);",
+                      "pm.collectionVariables.set('refreshToken', jsonData.refreshToken);",
+                      "",
+                      "if (jsonData.walletId !== null && jsonData.walletId !== undefined) {",
+                      "    pm.collectionVariables.set('walletId', String(jsonData.walletId));",
+                      "}",
+                      "",
+                      "console.log('Customer login: accessToken, refreshToken and walletId saved.');"
                     ]
                   }
                 }
@@ -68,7 +113,10 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
@@ -76,8 +124,14 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/users/login",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "users", "login"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "login"
+                  ]
                 }
               }
             },
@@ -94,11 +148,15 @@
                       "});",
                       "",
                       "const jsonData = pm.response.json();",
-                      "if (jsonData.accessToken) {",
-                      "    pm.collectionVariables.set('adminAccessToken', jsonData.accessToken);",
-                      "    pm.collectionVariables.set('adminRefreshToken', jsonData.refreshToken);",
-                      "    console.log('Admin tokens saved.');",
-                      "}"
+                      "",
+                      "pm.expect(jsonData.accessToken).to.exist;",
+                      "pm.expect(jsonData.refreshToken).to.exist;",
+                      "",
+                      "pm.collectionVariables.set('adminAccessToken', jsonData.accessToken);",
+                      "pm.collectionVariables.set('adminRefreshToken', jsonData.refreshToken);",
+                      "",
+                      "console.log('Admin login: adminAccessToken and adminRefreshToken saved.');",
+                      "console.log('Customer walletId was not changed.');"
                     ]
                   }
                 }
@@ -106,7 +164,10 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
@@ -114,8 +175,14 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/users/login",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "users", "login"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "login"
+                  ]
                 }
               }
             },
@@ -124,7 +191,10 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
@@ -132,8 +202,94 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/auth/refresh",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "auth", "refresh"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "refresh"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Logout",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Logout successful', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                      "});",
+                      "",
+                      "pm.collectionVariables.unset('accessToken');",
+                      "pm.collectionVariables.unset('refreshToken');"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/logout",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "logout"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Logout (Admin)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Admin logout successful', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                      "});",
+                      "",
+                      "pm.collectionVariables.unset('adminAccessToken');",
+                      "pm.collectionVariables.unset('adminRefreshToken');"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminAccessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/logout",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "logout"
+                  ]
                 }
               }
             }
@@ -147,12 +303,21 @@
               "request": {
                 "method": "GET",
                 "header": [
-                  { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/api/wallets/{{walletId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "wallets", "{{walletId}}"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallets",
+                    "{{walletId}}"
+                  ]
                 }
               }
             },
@@ -161,8 +326,14 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
@@ -170,8 +341,15 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/wallets/{{walletId}}/deposit",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "wallets", "{{walletId}}", "deposit"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallets",
+                    "{{walletId}}",
+                    "deposit"
+                  ]
                 }
               }
             },
@@ -180,8 +358,14 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
@@ -189,8 +373,15 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/wallets/{{walletId}}/withdraw",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "wallets", "{{walletId}}", "withdraw"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallets",
+                    "{{walletId}}",
+                    "withdraw"
+                  ]
                 }
               }
             }
@@ -204,8 +395,14 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
@@ -213,8 +410,13 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/transfers",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "transfers"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "transfers"
+                  ]
                 }
               }
             },
@@ -223,15 +425,31 @@
               "request": {
                 "method": "GET",
                 "header": [
-                  { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/api/wallets/{{walletId}}/transactions?page=0&size=10",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "wallets", "{{walletId}}", "transactions"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallets",
+                    "{{walletId}}",
+                    "transactions"
+                  ],
                   "query": [
-                    { "key": "page", "value": "0" },
-                    { "key": "size", "value": "10" }
+                    {
+                      "key": "page",
+                      "value": "0"
+                    },
+                    {
+                      "key": "size",
+                      "value": "10"
+                    }
                   ]
                 }
               }
@@ -261,8 +479,14 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/api/wallets/{{walletId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "wallets", "{{walletId}}"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallets",
+                    "{{walletId}}"
+                  ]
                 }
               }
             },
@@ -284,12 +508,21 @@
               "request": {
                 "method": "GET",
                 "header": [
-                  { "key": "Authorization", "value": "Bearer not-a-real-token" }
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer not-a-real-token"
+                  }
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/api/wallets/{{walletId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "wallets", "{{walletId}}"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallets",
+                    "{{walletId}}"
+                  ]
                 }
               }
             },
@@ -311,12 +544,21 @@
               "request": {
                 "method": "GET",
                 "header": [
-                  { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/api/wallets/{{otherWalletId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "wallets", "{{otherWalletId}}"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallets",
+                    "{{otherWalletId}}"
+                  ]
                 }
               }
             },
@@ -338,8 +580,14 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
@@ -347,8 +595,13 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/transfers",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "transfers"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "transfers"
+                  ]
                 }
               }
             },
@@ -370,12 +623,137 @@
               "request": {
                 "method": "GET",
                 "header": [
-                  { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminAccessToken}}"
+                  }
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/api/wallets/{{otherWalletId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "wallets", "{{otherWalletId}}"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallets",
+                    "{{otherWalletId}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Customer — access admin API (expect 403)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Returns 403 Forbidden', function () {",
+                      "    pm.response.to.have.status(403);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/wallets",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "wallets"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Customer token after logout (expect 401)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Returns 401 Unauthorized', function () {",
+                      "    pm.response.to.have.status(401);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{logoutTestToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wallets/{{walletId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "wallets",
+                    "{{walletId}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin",
+          "item": [
+            {
+              "name": "Get All Wallets",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Admin can view all wallets', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminAccessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/wallets",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "wallets"
+                  ]
                 }
               }
             }
