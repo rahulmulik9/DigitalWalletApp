@@ -2,12 +2,14 @@ package com.rahul.DigitalWallet.service;
 
 import com.rahul.DigitalWallet.dto.LoginRequest;
 import com.rahul.DigitalWallet.dto.RegisterRequest;
+import com.rahul.DigitalWallet.entity.Role;
 import com.rahul.DigitalWallet.entity.User;
 import com.rahul.DigitalWallet.entity.Wallet;
 import com.rahul.DigitalWallet.exception.DuplicateEmailException;
 import com.rahul.DigitalWallet.exception.ResourceNotFoundException;
 import com.rahul.DigitalWallet.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +20,7 @@ import java.math.BigDecimal;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public User register(RegisterRequest request) {
@@ -28,7 +31,8 @@ public class UserService {
         User user = User.builder()
                 .fullName(request.getFullName())
                 .email(request.getEmail())
-                .password(request.getPassword()) // plaintext for now — Phase 2 hashes this
+                .password(passwordEncoder.encode(request.getPassword()))   // CHANGED — was plaintext
+                .role(Role.CUSTOMER)                                       // NEW — default role
                 .build();
 
         // Every user gets a wallet the moment they register.
