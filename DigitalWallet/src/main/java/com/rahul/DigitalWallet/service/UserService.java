@@ -27,6 +27,7 @@ public class UserService {
 
     @Transactional
     public User register(RegisterRequest request) {
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new DuplicateEmailException("Email already registered: " + request.getEmail());
         }
@@ -34,11 +35,10 @@ public class UserService {
         User user = User.builder()
                 .fullName(request.getFullName())
                 .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))   // CHANGED — was plaintext
-                .role(Role.CUSTOMER)                                       // NEW — default role
+                .password(passwordEncoder.encode(request.getPassword()))
+                .role(Role.CUSTOMER)
                 .build();
 
-        // Every user gets a wallet the moment they register.
         Wallet wallet = Wallet.builder()
                 .user(user)
                 .balance(BigDecimal.ZERO)
@@ -51,6 +51,7 @@ public class UserService {
     }
 
     public LoginResponse login(LoginRequest request) {
+
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("Invalid email or password"));
 
@@ -59,12 +60,16 @@ public class UserService {
         }
 
         String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail());
+
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail());
+
+        Long walletId = user.getWallet() != null ? user.getWallet().getId() : null;
 
         return LoginResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
+                .walletId(walletId)
                 .build();
     }
 }

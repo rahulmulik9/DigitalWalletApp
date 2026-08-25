@@ -15,8 +15,9 @@ public class JwtTokenProvider {
     @Value("${jwt.secret}")
     private String secret;
 
-    private static final long ACCESS_TOKEN_VALIDITY_MS = 15 * 60 * 1000;        // 15 min
-    private static final long REFRESH_TOKEN_VALIDITY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+    private static final long ACCESS_TOKEN_VALIDITY_MS = 15 * 60 * 1000;
+
+    private static final long REFRESH_TOKEN_VALIDITY_MS = 7 * 24 * 60 * 60 * 1000;
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes());
@@ -30,6 +31,7 @@ public class JwtTokenProvider {
         return buildToken(email, REFRESH_TOKEN_VALIDITY_MS);
     }
 
+
     private String buildToken(String email, long validityMs) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + validityMs);
@@ -42,6 +44,7 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+
     public String extractEmail(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
@@ -51,6 +54,7 @@ public class JwtTokenProvider {
                 .getSubject();
     }
 
+
     public boolean isTokenValid(String token) {
         try {
             Jwts.parser()
@@ -59,7 +63,18 @@ public class JwtTokenProvider {
                     .parseSignedClaims(token);
             return true;
         } catch (Exception e) {
-            return false;   // expired, tampered, malformed — all invalid
+            return false;
         }
+    }
+
+    public long getExpirationTime(String token) {
+
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .getExpiration()
+                .getTime();
     }
 }

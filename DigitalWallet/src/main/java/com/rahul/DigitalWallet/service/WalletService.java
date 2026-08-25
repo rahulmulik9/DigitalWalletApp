@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -25,9 +26,16 @@ public class WalletService {
         return walletRepository.findById(walletId)
                 .orElseThrow(() -> new ResourceNotFoundException("Wallet not found: " + walletId));
     }
+
+    public List<Wallet> getAllWallets() {
+        return walletRepository.findAll();
+    }
+
     @Transactional
     public Wallet deposit(Wallet wallet, BigDecimal amount) {
+
         wallet.setBalance(wallet.getBalance().add(amount));
+
         walletRepository.save(wallet);
 
         Transaction txn = Transaction.builder()
@@ -36,18 +44,20 @@ public class WalletService {
                 .type(TransactionType.DEPOSIT)
                 .status(TransactionStatus.SUCCESS)
                 .build();
-        transactionRepository.save(txn);
 
+        transactionRepository.save(txn);
         return wallet;
     }
 
     @Transactional
     public Wallet withdraw(Wallet wallet, BigDecimal amount) {
+
         if (wallet.getBalance().compareTo(amount) < 0) {
             throw new InsufficientBalanceException("Insufficient balance in wallet: " + wallet.getId());
         }
 
         wallet.setBalance(wallet.getBalance().subtract(amount));
+
         walletRepository.save(wallet);
 
         Transaction txn = Transaction.builder()
@@ -56,8 +66,8 @@ public class WalletService {
                 .type(TransactionType.WITHDRAW)
                 .status(TransactionStatus.SUCCESS)
                 .build();
-        transactionRepository.save(txn);
 
+        transactionRepository.save(txn);
         return wallet;
     }
 }
