@@ -116,3 +116,15 @@ INSERT INTO transactions
 VALUES
 (10, 1, NULL, 200.00, 'WITHDRAW', 'SUCCESS',
  'Cash withdrawal', CURRENT_TIMESTAMP);
+
+
+-- =========================
+-- RESYNC AUTO-INCREMENT SEQUENCES
+-- =========================
+-- Explicit IDs above bypass Postgres's IDENTITY sequence. Without this,
+-- the next app-generated INSERT (e.g. registering a new user via the API)
+-- collides with an existing seed row and fails with a duplicate-key error.
+
+SELECT setval(pg_get_serial_sequence('users', 'id'), (SELECT MAX(id) FROM users));
+SELECT setval(pg_get_serial_sequence('wallets', 'id'), (SELECT MAX(id) FROM wallets));
+SELECT setval(pg_get_serial_sequence('transactions', 'id'), (SELECT MAX(id) FROM transactions));
