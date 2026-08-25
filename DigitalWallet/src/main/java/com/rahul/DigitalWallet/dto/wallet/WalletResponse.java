@@ -1,4 +1,4 @@
-package com.rahul.DigitalWallet.dto;
+package com.rahul.DigitalWallet.dto.wallet;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

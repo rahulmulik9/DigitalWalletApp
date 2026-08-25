@@ -1,4 +1,4 @@
-package com.rahul.DigitalWallet.dto;
+package com.rahul.DigitalWallet.dto.transfer;
 
 import com.rahul.DigitalWallet.entity.TransactionStatus;
 import com.rahul.DigitalWallet.entity.TransactionType;

@@ -1,6 +1,6 @@
 package com.rahul.DigitalWallet.service;
 
-import com.rahul.DigitalWallet.dto.TransferRequest;
+import com.rahul.DigitalWallet.dto.transfer.TransferRequest;
 import com.rahul.DigitalWallet.entity.*;
 import com.rahul.DigitalWallet.exception.InsufficientBalanceException;
 import com.rahul.DigitalWallet.exception.ResourceNotFoundException;
@@ -9,11 +9,10 @@ import com.rahul.DigitalWallet.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -33,7 +32,7 @@ public class TransferService {
      * version works before moving on.
      */
     @Transactional
-    public Transaction transfer(TransferRequest request) {
+    public Transaction transfer(TransferRequest request, String callerEmail) {   // CHANGED — added callerEmail
         if (request.getFromWalletId().equals(request.getToWalletId())) {
             throw new IllegalArgumentException("Cannot transfer to the same wallet");
         }
@@ -41,6 +40,10 @@ public class TransferService {
         Wallet fromWallet = walletRepository.findById(request.getFromWalletId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Source wallet not found: " + request.getFromWalletId()));
+
+        if (!fromWallet.getUser().getEmail().equals(callerEmail)) {   // NEW
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied: source wallet does not belong to you");
+        }
 
         Wallet toWallet = walletRepository.findById(request.getToWalletId())
                 .orElseThrow(() -> new ResourceNotFoundException(

@@ -1,8 +1,9 @@
 package com.rahul.DigitalWallet.controller;
 
-import com.rahul.DigitalWallet.dto.TransactionResponse;
-import com.rahul.DigitalWallet.dto.TransferRequest;
+import com.rahul.DigitalWallet.dto.transfer.TransactionResponse;
+import com.rahul.DigitalWallet.dto.transfer.TransferRequest;
 import com.rahul.DigitalWallet.entity.Transaction;
+import com.rahul.DigitalWallet.security.SecurityUtils;
 import com.rahul.DigitalWallet.service.TransferService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,10 +20,12 @@ import org.springframework.web.bind.annotation.*;
 public class TransferController {
 
     private final TransferService transferService;
+    private final SecurityUtils securityUtils;   // NEW
 
     @PostMapping("/transfers")
     public ResponseEntity<TransactionResponse> transfer(@Valid @RequestBody TransferRequest request) {
-        Transaction txn = transferService.transfer(request);
+        String callerEmail = securityUtils.getCurrentUserEmail();          // NEW
+        Transaction txn = transferService.transfer(request, callerEmail);  // CHANGED
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(txn));
     }
 
