@@ -1,4 +1,4 @@
-package com.rahul.DigitalWallet.dto;
+package com.rahul.DigitalWallet.dto.user;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;

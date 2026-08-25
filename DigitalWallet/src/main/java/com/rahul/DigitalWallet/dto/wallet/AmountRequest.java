@@ -1,4 +1,4 @@
-package com.rahul.DigitalWallet.dto;
+package com.rahul.DigitalWallet.dto.wallet;
 
 
 import jakarta.validation.constraints.DecimalMin;

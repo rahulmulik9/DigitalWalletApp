@@ -1,6 +1,10 @@
 package com.rahul.DigitalWallet.controller;
 
-import com.rahul.DigitalWallet.dto.*;
+import com.rahul.DigitalWallet.dto.user.LoginRequest;
+import com.rahul.DigitalWallet.dto.user.LoginResponse;
+import com.rahul.DigitalWallet.dto.user.RegisterRequest;
+import com.rahul.DigitalWallet.dto.user.UserResponse;
+import com.rahul.DigitalWallet.dto.wallet.WalletInfo;
 import com.rahul.DigitalWallet.entity.User;
 import com.rahul.DigitalWallet.entity.Wallet;
 import com.rahul.DigitalWallet.service.UserService;
@@ -44,8 +48,8 @@ public class UserController {
                 .build();
     }
 
-    private WalletSummary toWalletSummary(Wallet wallet) {
-        return WalletSummary.builder()
+    private WalletInfo toWalletSummary(Wallet wallet) {
+        return WalletInfo.builder()
                 .balance(wallet.getBalance())
                 .currency(wallet.getCurrency())
                 .build();

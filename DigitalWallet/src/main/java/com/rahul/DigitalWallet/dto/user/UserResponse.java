@@ -1,5 +1,6 @@
-package com.rahul.DigitalWallet.dto;
+package com.rahul.DigitalWallet.dto.user;
 
+import com.rahul.DigitalWallet.dto.wallet.WalletInfo;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -14,6 +15,6 @@ public class UserResponse {
     private String fullName;
     private String email;
     private LocalDateTime createdAt;
-    private WalletSummary wallet;
+    private WalletInfo wallet;
 }
 

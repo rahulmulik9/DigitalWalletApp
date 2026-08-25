@@ -1,8 +1,8 @@
 package com.rahul.DigitalWallet.service;
 
-import com.rahul.DigitalWallet.dto.LoginRequest;
-import com.rahul.DigitalWallet.dto.LoginResponse;
-import com.rahul.DigitalWallet.dto.RegisterRequest;
+import com.rahul.DigitalWallet.dto.user.LoginRequest;
+import com.rahul.DigitalWallet.dto.user.LoginResponse;
+import com.rahul.DigitalWallet.dto.user.RegisterRequest;
 import com.rahul.DigitalWallet.entity.Role;
 import com.rahul.DigitalWallet.entity.User;
 import com.rahul.DigitalWallet.entity.Wallet;

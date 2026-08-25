@@ -1,4 +1,4 @@
-package com.rahul.DigitalWallet.dto;
+package com.rahul.DigitalWallet.dto.wallet;
 
 import lombok.*;
 
@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class WalletSummary {
+public class WalletInfo {
     private BigDecimal balance;
     private String currency;
 }

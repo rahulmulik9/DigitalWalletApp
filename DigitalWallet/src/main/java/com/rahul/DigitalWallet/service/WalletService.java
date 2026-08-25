@@ -25,11 +25,8 @@ public class WalletService {
         return walletRepository.findById(walletId)
                 .orElseThrow(() -> new ResourceNotFoundException("Wallet not found: " + walletId));
     }
-
     @Transactional
-    public Wallet deposit(Long walletId, BigDecimal amount) {
-        Wallet wallet = getWallet(walletId);
-
+    public Wallet deposit(Wallet wallet, BigDecimal amount) {
         wallet.setBalance(wallet.getBalance().add(amount));
         walletRepository.save(wallet);
 
@@ -45,11 +42,9 @@ public class WalletService {
     }
 
     @Transactional
-    public Wallet withdraw(Long walletId, BigDecimal amount) {
-        Wallet wallet = getWallet(walletId);
-
+    public Wallet withdraw(Wallet wallet, BigDecimal amount) {
         if (wallet.getBalance().compareTo(amount) < 0) {
-            throw new InsufficientBalanceException("Insufficient balance in wallet: " + walletId);
+            throw new InsufficientBalanceException("Insufficient balance in wallet: " + wallet.getId());
         }
 
         wallet.setBalance(wallet.getBalance().subtract(amount));
