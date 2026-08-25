@@ -1,6 +1,7 @@
 package com.rahul.DigitalWallet.service;
 
 import com.rahul.DigitalWallet.dto.LoginRequest;
+import com.rahul.DigitalWallet.dto.LoginResponse;
 import com.rahul.DigitalWallet.dto.RegisterRequest;
 import com.rahul.DigitalWallet.entity.Role;
 import com.rahul.DigitalWallet.entity.User;
@@ -8,6 +9,7 @@ import com.rahul.DigitalWallet.entity.Wallet;
 import com.rahul.DigitalWallet.exception.DuplicateEmailException;
 import com.rahul.DigitalWallet.exception.ResourceNotFoundException;
 import com.rahul.DigitalWallet.repository.UserRepository;
+import com.rahul.DigitalWallet.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @Transactional
     public User register(RegisterRequest request) {
@@ -47,14 +50,21 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    public User login(LoginRequest request) {
+    public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("No account found for this email"));
+                .orElseThrow(() -> new ResourceNotFoundException("Invalid email or password"));
 
-        if (!user.getPassword().equals(request.getPassword())) {
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new ResourceNotFoundException("Invalid email or password");
         }
 
-        return user;
+        String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail());
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail());
+
+        return LoginResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .tokenType("Bearer")
+                .build();
     }
 }

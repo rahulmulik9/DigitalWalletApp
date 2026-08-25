@@ -1,6 +1,7 @@
 package com.rahul.DigitalWallet.controller;
 
 import com.rahul.DigitalWallet.dto.LoginRequest;
+import com.rahul.DigitalWallet.dto.LoginResponse;
 import com.rahul.DigitalWallet.dto.RegisterRequest;
 import com.rahul.DigitalWallet.entity.User;
 import com.rahul.DigitalWallet.service.UserService;
@@ -24,8 +25,8 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<User> login(@Valid @RequestBody LoginRequest request) {
-        User user = userService.login(request);
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+        LoginResponse user = userService.login(request);
         return ResponseEntity.ok(user);
     }
 }
