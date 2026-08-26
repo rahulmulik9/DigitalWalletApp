@@ -6,9 +6,12 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.BatchSize;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "wallets")
@@ -57,4 +60,9 @@ public class Wallet {
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
+
+    @OneToMany(mappedBy = "wallet", fetch = FetchType.LAZY)
+    @BatchSize(size = 50)
+    @Builder.Default
+    private List<LedgerEntry> ledgerEntries = new ArrayList<>();
 }

@@ -65,32 +65,20 @@ public class TransferService {
                 .toWallet(toWallet)
                 .amount(request.getAmount())
                 .type(TransactionType.TRANSFER)
-                .status(TransactionStatus.SUCCESS)
+                .status(TransactionStatus.PENDING)
                 .build();
 
+
+        LedgerEntry debit = LedgerEntry.builder()
+                .wallet(fromWallet).transaction(txn).amount(request.getAmount())
+                .type(LedgerEntryType.DEBIT).description("Transfer to wallet " + toWallet.getId()).build();
+        LedgerEntry credit = LedgerEntry.builder()
+                .wallet(toWallet).transaction(txn).amount(request.getAmount())
+                .type(LedgerEntryType.CREDIT).description("Transfer from wallet " + fromWallet.getId()).build();
+        txn.addLedgerEntry(debit);
+        txn.addLedgerEntry(credit);
+        txn.setStatus(TransactionStatus.SUCCESS);
+
         return transactionRepository.save(txn);
-    }
-
-    public Page<Transaction> getHistory(Long walletId, Pageable pageable) {
-       // return transactionRepository.findAllByWalletId(walletId, pageable);
-        Page<Transaction> transactions =  transactionRepository.findAllByWalletId(walletId, pageable);
-
-//        // Get first Transaction
-//        Transaction transaction = transactions.getContent().get(1);
-//
-//        // Get wallets from that Transaction
-//        Wallet fromWallet = transaction.getFromWallet();
-//        Wallet toWallet = transaction.getToWallet();
-//
-//        Long id = fromWallet.getId();
-//        User user = fromWallet.getUser();
-//        BigDecimal balance = fromWallet.getBalance();
-//        String currency = fromWallet.getCurrency();
-//        Long version = fromWallet.getVersion();
-//        LocalDateTime createdAt = fromWallet.getCreatedAt();
-//        LocalDateTime updatedAt = fromWallet.getUpdatedAt();
-
-        // Put breakpoint here
-        return transactions;
     }
 }

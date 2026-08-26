@@ -4,6 +4,8 @@ import com.rahul.DigitalWallet.entity.Transaction;
 import com.rahul.DigitalWallet.entity.TransactionStatus;
 import com.rahul.DigitalWallet.entity.TransactionType;
 import com.rahul.DigitalWallet.entity.Wallet;
+import com.rahul.DigitalWallet.entity.LedgerEntry;
+import com.rahul.DigitalWallet.entity.LedgerEntryType;
 import com.rahul.DigitalWallet.exception.InsufficientBalanceException;
 import com.rahul.DigitalWallet.exception.ResourceNotFoundException;
 import com.rahul.DigitalWallet.repository.TransactionRepository;
@@ -45,6 +47,11 @@ public class WalletService {
                 .status(TransactionStatus.SUCCESS)
                 .build();
 
+        LedgerEntry credit = LedgerEntry.builder()
+                .wallet(wallet).transaction(txn).amount(amount)
+                .type(LedgerEntryType.CREDIT).description("Deposit").build();
+        txn.addLedgerEntry(credit);
+
         transactionRepository.save(txn);
         return wallet;
     }
@@ -66,6 +73,11 @@ public class WalletService {
                 .type(TransactionType.WITHDRAW)
                 .status(TransactionStatus.SUCCESS)
                 .build();
+
+        LedgerEntry debit = LedgerEntry.builder()
+                .wallet(wallet).transaction(txn).amount(amount)
+                .type(LedgerEntryType.DEBIT).description("Withdrawal").build();
+        txn.addLedgerEntry(debit);
 
         transactionRepository.save(txn);
         return wallet;
