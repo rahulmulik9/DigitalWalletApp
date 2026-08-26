@@ -319,35 +319,17 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/api/wallets/{{walletId}}/transactions?fromDate=2020-01-01T00:00:00&toDate=2030-01-01T23:59:59&minAmount=1&maxAmount=10000&page=0&size=10",
+            "url":  {
+              "raw": "{{baseUrl}}/api/wallets/{{walletId}}/transactions/filter?fromDate=2020-01-01T00:00:00&toDate=2030-01-01T23:59:59&minAmount=1&maxAmount=10000&page=0&size=10",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "wallets", "{{walletId}}", "transactions"],
+              "path": ["api", "wallets", "{{walletId}}", "transactions", "filter"],
               "query": [
-                {
-                  "key": "fromDate",
-                  "value": "2020-01-01T00:00:00"
-                },
-                {
-                  "key": "toDate",
-                  "value": "2030-01-01T23:59:59"
-                },
-                {
-                  "key": "minAmount",
-                  "value": "1"
-                },
-                {
-                  "key": "maxAmount",
-                  "value": "10000"
-                },
-                {
-                  "key": "page",
-                  "value": "0"
-                },
-                {
-                  "key": "size",
-                  "value": "10"
-                }
+                { "key": "fromDate", "value": "2020-01-01T00:00:00" },
+                { "key": "toDate", "value": "2030-01-01T23:59:59" },
+                { "key": "minAmount", "value": "1" },
+                { "key": "maxAmount", "value": "10000" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
               ]
             }
           }
