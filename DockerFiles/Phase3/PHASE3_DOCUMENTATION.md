@@ -32,12 +32,12 @@ Phase 3 adds a proper **double-entry ledger system** alongside the Phase 2 cache
 - An **auditable trail** of every rupee that ever moved
 - The ability to **reconcile** a wallet's balance independently of the cached column
 - Support for **saved beneficiaries** (quick transfer targets)
-- **Paginated transaction history**
+- **Paginated transaction history** and an optional filtered-history API
 
 ### What Was Added
 - `LedgerEntry` — immutable DEBIT/CREDIT rows
 - `Beneficiary` — saved payees per user
-- Transaction history endpoint with pagination
+- Transaction history endpoint with pagination, plus a separate filtered-history endpoint
 - Initial N+1 mitigation for wallet references via `@EntityGraph`
 - Database indexes on `wallet_id` and `created_at`
 
@@ -199,6 +199,12 @@ Added a paginated history query with `@EntityGraph` for wallet references:
 Page<Transaction> findHistory(Long walletId, Pageable pageable);
 ```
 
+The filtered API uses a separate repository method. `COALESCE` gives PostgreSQL a concrete timestamp or numeric comparison type even when a filter value is omitted:
+```java
+Page<Transaction> findFilteredHistory(Long walletId, LocalDateTime fromDate, LocalDateTime toDate,
+                                      BigDecimal minAmount, BigDecimal maxAmount, Pageable pageable);
+```
+
 ---
 
 ## Services
@@ -254,7 +260,7 @@ Same pattern, but produce **one** ledger entry instead of two:
 
 ### `TransactionService.getHistory()` (NEW)
 
-Thin wrapper: verifies the wallet exists, then delegates to `TransactionRepository.findHistory()` with the pagination parameters.
+`getHistory()` verifies the wallet exists and delegates to `TransactionRepository.findHistory()` with pagination parameters. `getFilteredHistory()` is a separate method that delegates to `findFilteredHistory()` with optional date and amount filters.
 
 ### `BeneficiaryService` (NEW)
 
@@ -270,6 +276,7 @@ Thin wrapper: verifies the wallet exists, then delegates to `TransactionReposito
 |---|---|---|---|
 | `POST` | `/api/transfers` | Bearer token | Transfer money between two wallets |
 | `GET` | `/api/wallets/{walletId}/transactions` | Bearer token + ownership | Paginated transaction history |
+| `GET` | `/api/wallets/{walletId}/transactions/filter` | Bearer token + ownership | Paginated transaction history with optional date and amount filters |
 | `POST` | `/api/beneficiaries` | Bearer token | Save a payee |
 | `GET` | `/api/beneficiaries` | Bearer token | List caller's saved payees |
 | `DELETE` | `/api/beneficiaries/{id}` | Bearer token | Remove a saved payee |
@@ -343,6 +350,26 @@ Thin wrapper: verifies the wallet exists, then delegates to `TransactionReposito
 ```
 
 Ownership is enforced the same way as `WalletController` — admins bypass the check and regular users can only view their own wallet's history. The intended rejection status is 403; the current global exception handler returns 500 for this `ResponseStatusException`.
+
+---
+
+### `GET /api/wallets/{walletId}/transactions/filter`
+
+This is the separate endpoint for filtered transaction history. All filters are optional; `page` and `size` retain the same defaults as the standard history endpoint.
+
+| Parameter | Type | Default | Purpose |
+|---|---|---|---|
+| `fromDate` | `LocalDateTime` | — | Include transactions at or after this timestamp |
+| `toDate` | `LocalDateTime` | — | Include transactions at or before this timestamp |
+| `minAmount` | `BigDecimal` | — | Minimum amount |
+| `maxAmount` | `BigDecimal` | — | Maximum amount |
+| `page` | `int` | `0` | Zero-indexed page |
+| `size` | `int` | `10` | Page size |
+
+Example:
+```text
+GET /api/wallets/1/transactions/filter?fromDate=2020-01-01T00:00:00&toDate=2030-01-01T23:59:59&minAmount=1&maxAmount=10000&page=0&size=10
+```
 
 ---
 
@@ -465,12 +492,13 @@ Every `TRANSFER` transaction has exactly 2 ledger rows (1 DEBIT + 1 CREDIT); eve
 | 6 | View another user's wallet history (non-admin) | Currently 500; intended API status is 403 (see known limitations) |
 | 7 | Admin views any wallet's history | 200 |
 | 8 | Request a later history page | 200 with the requested `page` and `size` |
-| 9 | Add own wallet as beneficiary | 400 |
-| 10 | Add duplicate beneficiary | 400 |
-| 11 | Add valid beneficiary | 201 |
-| 12 | List beneficiaries | 200, only caller's own |
-| 13 | Delete another user's beneficiary by ID | 404 |
-| 14 | Reconcile: `SUM(CREDIT) - SUM(DEBIT)` per wallet | Equals `Wallet.balance` |
+| 9 | Filter history by date range or amount range | 200, with only matching transactions returned |
+| 10 | Add own wallet as beneficiary | 400 |
+| 11 | Add duplicate beneficiary | 400 |
+| 12 | Add valid beneficiary | 201 |
+| 13 | List beneficiaries | 200, only caller's own |
+| 14 | Delete another user's beneficiary by ID | 404 |
+| 15 | Reconcile: `SUM(CREDIT) - SUM(DEBIT)` per wallet | Equals `Wallet.balance` |
 
 ---
 
