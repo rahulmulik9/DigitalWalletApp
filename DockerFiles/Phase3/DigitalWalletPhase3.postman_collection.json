@@ -1,0 +1,490 @@
+{
+  "info": {
+    "_postman_id": "digital-wallet-phase-3-advanced-jpa-ledger",
+    "name": "DigitalWalletAPI - Complete (Phase 2 + Phase 3)",
+    "description": "Complete Postman collection for every API currently exposed by the DigitalWallet application. It includes user/authentication, wallet operations, ledger-enabled transfers, transaction history, beneficiaries, and admin operations. Seeded local users: rahul@gmail.com and admin@gmail.com; both use password123. Rahul owns wallet 1; wallets 2 and 3 belong to other users.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "walletId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "otherWalletId",
+      "value": "2",
+      "type": "string"
+    },
+    {
+      "key": "beneficiaryWalletId",
+      "value": "2",
+      "type": "string"
+    },
+    {
+      "key": "beneficiaryId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminAccessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminRefreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "newUserEmail",
+      "value": "postman-test@example.com",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "User and authentication operations",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Postman Test User\",\n  \"email\": \"{{newUserEmail}}\",\n  \"password\": \"password123\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {"raw": "{{baseUrl}}/api/users/register", "host": ["{{baseUrl}}"], "path": ["api", "users", "register"]}
+          }
+        },
+        {
+          "name": "Login (Customer - Rahul)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Customer login succeeds', function () { pm.response.to.have.status(200); });",
+                "const user = pm.response.json();",
+                "pm.expect(user.accessToken).to.exist;",
+                "pm.expect(user.refreshToken).to.exist;",
+                "pm.collectionVariables.set('accessToken', user.accessToken);",
+                "pm.collectionVariables.set('refreshToken', user.refreshToken);",
+                "pm.collectionVariables.set('walletId', String(user.walletId));"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"email\": \"rahul@gmail.com\",\n  \"password\": \"password123\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": {"raw": "{{baseUrl}}/api/users/login", "host": ["{{baseUrl}}"], "path": ["api", "users", "login"]}
+          }
+        },
+        {
+          "name": "Login (Admin)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Admin login succeeds', function () { pm.response.to.have.status(200); });",
+                "const user = pm.response.json();",
+                "pm.collectionVariables.set('adminAccessToken', user.accessToken);",
+                "pm.collectionVariables.set('adminRefreshToken', user.refreshToken);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"email\": \"admin@gmail.com\",\n  \"password\": \"password123\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": {"raw": "{{baseUrl}}/api/users/login", "host": ["{{baseUrl}}"], "path": ["api", "users", "login"]}
+          }
+        },
+        {
+          "name": "Refresh Customer Access Token",
+          "event": [{
+            "listen": "test",
+            "script": {"type": "text/javascript", "exec": [
+              "pm.test('Access token refresh succeeds', function () { pm.response.to.have.status(200); });",
+              "const tokens = pm.response.json();",
+              "pm.collectionVariables.set('accessToken', tokens.accessToken);"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": {"raw": "{{baseUrl}}/api/auth/refresh", "host": ["{{baseUrl}}"], "path": ["api", "auth", "refresh"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wallet operations",
+      "item": [
+        {
+          "name": "Get My Wallet",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/api/wallets/{{walletId}}", "host": ["{{baseUrl}}"], "path": ["api", "wallets", "{{walletId}}"]}
+          }
+        },
+        {
+          "name": "Deposit Money",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {"mode": "raw", "raw": "{\n  \"amount\": 100.00\n}", "options": {"raw": {"language": "json"}}},
+            "url": {"raw": "{{baseUrl}}/api/wallets/{{walletId}}/deposit", "host": ["{{baseUrl}}"], "path": ["api", "wallets", "{{walletId}}", "deposit"]}
+          }
+        },
+        {
+          "name": "Withdraw Money",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "body": {"mode": "raw", "raw": "{\n  \"amount\": 10.00\n}", "options": {"raw": {"language": "json"}}},
+            "url": {"raw": "{{baseUrl}}/api/wallets/{{walletId}}/withdraw", "host": ["{{baseUrl}}"], "path": ["api", "wallets", "{{walletId}}", "withdraw"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin operations",
+      "item": [
+        {
+          "name": "Get All Wallets",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('Admin wallet list is returned', function () { pm.response.to.have.status(200); });"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{adminAccessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/api/admin/wallets", "host": ["{{baseUrl}}"], "path": ["api", "admin", "wallets"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 3 - Ledger-enabled transfer",
+      "item": [
+        {
+          "name": "Transfer Money (creates debit and credit ledger entries)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Transfer is created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const transaction = pm.response.json();",
+                  "pm.expect(transaction.type).to.eql('TRANSFER');",
+                  "pm.expect(transaction.status).to.eql('SUCCESS');",
+                  "pm.expect(transaction.fromWalletId).to.eql(Number(pm.collectionVariables.get('walletId')));",
+                  "pm.expect(transaction.toWalletId).to.eql(Number(pm.collectionVariables.get('otherWalletId')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromWalletId\": {{walletId}},\n  \"toWalletId\": {{otherWalletId}},\n  \"amount\": 10.00\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transfers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transfers"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 3 - Transaction history and ledger",
+      "item": [
+        {
+          "name": "Get Transaction History (includes ledger entries)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Transaction history is returned', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const page = pm.response.json();",
+                  "pm.expect(page.content).to.be.an('array');",
+                  "pm.expect(page.number).to.eql(0);",
+                  "pm.expect(page.size).to.eql(10);",
+                  "",
+                  "if (page.content.length > 0) {",
+                  "    pm.expect(page.content[0].ledgerEntries).to.be.an('array');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallets/{{walletId}}/transactions?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallets", "{{walletId}}", "transactions"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Filtered Transaction History (date and amount)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Filtered transaction history is returned', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const page = pm.response.json();",
+                  "pm.expect(page.content).to.be.an('array');",
+                  "page.content.forEach(function (transaction) {",
+                  "    pm.expect(Number(transaction.amount)).to.be.within(1, 10000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallets/{{walletId}}/transactions?fromDate=2020-01-01T00:00:00&toDate=2030-01-01T23:59:59&minAmount=1&maxAmount=10000&page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallets", "{{walletId}}", "transactions"],
+              "query": [
+                {
+                  "key": "fromDate",
+                  "value": "2020-01-01T00:00:00"
+                },
+                {
+                  "key": "toDate",
+                  "value": "2030-01-01T23:59:59"
+                },
+                {
+                  "key": "minAmount",
+                  "value": "1"
+                },
+                {
+                  "key": "maxAmount",
+                  "value": "10000"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 3 - Beneficiaries",
+      "item": [
+        {
+          "name": "Create Beneficiary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Beneficiary is created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const beneficiary = pm.response.json();",
+                  "pm.expect(beneficiary.beneficiaryWalletId).to.eql(Number(pm.collectionVariables.get('beneficiaryWalletId')));",
+                  "pm.collectionVariables.set('beneficiaryId', String(beneficiary.id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"beneficiaryWalletId\": {{beneficiaryWalletId}},\n  \"nickname\": \"Amit\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/beneficiaries",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "beneficiaries"]
+            }
+          }
+        },
+        {
+          "name": "Get My Beneficiaries",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Beneficiary list is returned', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.expect(pm.response.json()).to.be.an('array');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/beneficiaries",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "beneficiaries"]
+            }
+          }
+        },
+        {
+          "name": "Delete Created Beneficiary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Beneficiary is deleted', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});",
+                  "pm.collectionVariables.unset('beneficiaryId');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/beneficiaries/{{beneficiaryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "beneficiaries", "{{beneficiaryId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Session cleanup (run last)",
+      "item": [
+        {
+          "name": "Logout Customer",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('Customer logout succeeds', function () { pm.response.to.have.status(204); });",
+            "pm.collectionVariables.unset('accessToken');",
+            "pm.collectionVariables.unset('refreshToken');"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {"raw": "{{baseUrl}}/api/users/logout", "host": ["{{baseUrl}}"], "path": ["api", "users", "logout"]}
+          }
+        }
+      ]
+    }
+  ]
+}
