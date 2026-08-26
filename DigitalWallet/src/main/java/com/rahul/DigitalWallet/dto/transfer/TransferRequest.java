@@ -1,5 +1,6 @@
 package com.rahul.DigitalWallet.dto.transfer;
 
+import com.rahul.DigitalWallet.validator.PositiveAmount;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -21,7 +22,6 @@ public class TransferRequest {
     @NotNull(message = "Destination wallet is required")
     private Long toWalletId;
 
-    @NotNull(message = "Amount is required")
-    @DecimalMin(value = "0.01", message = "Amount must be greater than zero")
+    @PositiveAmount
     private BigDecimal amount;
 }
