@@ -20,9 +20,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
 @RestController
 @RequestMapping("/api/wallets")
 @RequiredArgsConstructor
@@ -35,10 +32,6 @@ public class TransactionController {
     @GetMapping("/{walletId}/transactions")
     public ResponseEntity<Page<TransactionResponse>> history(
             @PathVariable Long walletId,
-            @RequestParam(required = false) LocalDateTime fromDate,
-            @RequestParam(required = false) LocalDateTime toDate,
-            @RequestParam(required = false) BigDecimal minAmount,
-            @RequestParam(required = false) BigDecimal maxAmount,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "10") @Min(1) int size) {
 
@@ -46,7 +39,7 @@ public class TransactionController {
         verifyOwnership(wallet);
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Transaction> transactions = transactionService.getHistory(walletId, fromDate, toDate, minAmount, maxAmount, pageable);
+        Page<Transaction> transactions = transactionService.getHistory(walletId, pageable);
         return ResponseEntity.ok(transactions.map(this::toResponse));
     }
 

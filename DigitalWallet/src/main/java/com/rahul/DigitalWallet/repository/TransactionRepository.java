@@ -8,9 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
     @Query("""
@@ -24,16 +21,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     @Query("""
             SELECT t FROM Transaction t
             WHERE (t.fromWallet.id = :walletId OR t.toWallet.id = :walletId)
-              AND (:fromDate IS NULL OR t.createdAt >= :fromDate)
-              AND (:toDate IS NULL OR t.createdAt <= :toDate)
-              AND (:minAmount IS NULL OR t.amount >= :minAmount)
-              AND (:maxAmount IS NULL OR t.amount <= :maxAmount)
             ORDER BY t.createdAt DESC
             """)
     Page<Transaction> findHistory(@Param("walletId") Long walletId,
-                                  @Param("fromDate") LocalDateTime fromDate,
-                                  @Param("toDate") LocalDateTime toDate,
-                                  @Param("minAmount") BigDecimal minAmount,
-                                  @Param("maxAmount") BigDecimal maxAmount,
                                   Pageable pageable);
 }

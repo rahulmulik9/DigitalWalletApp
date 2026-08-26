@@ -32,12 +32,12 @@ Phase 3 adds a proper **double-entry ledger system** alongside the Phase 2 cache
 - An **auditable trail** of every rupee that ever moved
 - The ability to **reconcile** a wallet's balance independently of the cached column
 - Support for **saved beneficiaries** (quick transfer targets)
-- **Paginated, filterable transaction history**
+- **Paginated transaction history**
 
 ### What Was Added
 - `LedgerEntry` — immutable DEBIT/CREDIT rows
 - `Beneficiary` — saved payees per user
-- Transaction history endpoint with date range, amount range, and pagination
+- Transaction history endpoint with pagination
 - Initial N+1 mitigation for wallet references via `@EntityGraph`
 - Database indexes on `wallet_id` and `created_at`
 
@@ -188,20 +188,15 @@ boolean existsByUserIdAndBeneficiaryWalletId(Long userId, Long beneficiaryWallet
 ```
 
 ### `TransactionRepository` (MODIFIED)
-Added a filterable, paginated history query with `@EntityGraph` to prevent N+1 (see [N+1 section](#n1-problem--how-its-fixed)):
+Added a paginated history query with `@EntityGraph` for wallet references:
 ```java
 @EntityGraph(attributePaths = {"fromWallet", "toWallet"})
 @Query("""
     SELECT t FROM Transaction t
     WHERE (t.fromWallet.id = :walletId OR t.toWallet.id = :walletId)
-      AND (:fromDate IS NULL OR t.createdAt >= :fromDate)
-      AND (:toDate IS NULL OR t.createdAt <= :toDate)
-      AND (:minAmount IS NULL OR t.amount >= :minAmount)
-      AND (:maxAmount IS NULL OR t.amount <= :maxAmount)
     ORDER BY t.createdAt DESC
     """)
-Page<Transaction> findHistory(Long walletId, LocalDateTime fromDate, LocalDateTime toDate,
-                               BigDecimal minAmount, BigDecimal maxAmount, Pageable pageable);
+Page<Transaction> findHistory(Long walletId, Pageable pageable);
 ```
 
 ---
@@ -259,7 +254,7 @@ Same pattern, but produce **one** ledger entry instead of two:
 
 ### `TransactionService.getHistory()` (NEW)
 
-Thin wrapper: verifies the wallet exists, then delegates to `TransactionRepository.findHistory()` with the filter/pagination parameters.
+Thin wrapper: verifies the wallet exists, then delegates to `TransactionRepository.findHistory()` with the pagination parameters.
 
 ### `BeneficiaryService` (NEW)
 
@@ -274,7 +269,7 @@ Thin wrapper: verifies the wallet exists, then delegates to `TransactionReposito
 | Method | Endpoint | Auth | Purpose |
 |---|---|---|---|
 | `POST` | `/api/transfers` | Bearer token | Transfer money between two wallets |
-| `GET` | `/api/wallets/{walletId}/transactions` | Bearer token + ownership | Paginated, filterable transaction history |
+| `GET` | `/api/wallets/{walletId}/transactions` | Bearer token + ownership | Paginated transaction history |
 | `POST` | `/api/beneficiaries` | Bearer token | Save a payee |
 | `GET` | `/api/beneficiaries` | Bearer token | List caller's saved payees |
 | `DELETE` | `/api/beneficiaries/{id}` | Bearer token | Remove a saved payee |
@@ -315,14 +310,10 @@ Thin wrapper: verifies the wallet exists, then delegates to `TransactionReposito
 
 ### `GET /api/wallets/{walletId}/transactions`
 
-**Query params (all optional except pagination defaults):**
+**Query parameters:**
 
 | Param | Type | Default | Purpose |
 |---|---|---|---|
-| `fromDate` | `LocalDateTime` | — | filter start |
-| `toDate` | `LocalDateTime` | — | filter end |
-| `minAmount` | `BigDecimal` | — | filter floor |
-| `maxAmount` | `BigDecimal` | — | filter ceiling |
 | `page` | `int` | `0` | zero-indexed page |
 | `size` | `int` | `10` | page size |
 
@@ -473,7 +464,7 @@ Every `TRANSFER` transaction has exactly 2 ledger rows (1 DEBIT + 1 CREDIT); eve
 | 5 | View own wallet's history | 200, paginated results |
 | 6 | View another user's wallet history (non-admin) | Currently 500; intended API status is 403 (see known limitations) |
 | 7 | Admin views any wallet's history | 200 |
-| 8 | Filter history by date range / amount range | Only matching rows returned |
+| 8 | Request a later history page | 200 with the requested `page` and `size` |
 | 9 | Add own wallet as beneficiary | 400 |
 | 10 | Add duplicate beneficiary | 400 |
 | 11 | Add valid beneficiary | 201 |
@@ -487,7 +478,7 @@ Every `TRANSFER` transaction has exactly 2 ledger rows (1 DEBIT + 1 CREDIT); eve
 
 - `Wallet.balance` is a **cached** value updated alongside ledger writes, not derived on every read — if the two ever drift (e.g. a bug, a manual DB edit), nothing currently auto-corrects it. `LedgerEntryRepository.calculateBalance()` exists for manual/scheduled reconciliation but isn't wired into an automated job yet.
 - The `@Transactional` guarantee in `TransferService` only holds because both wallets live in the **same database**. It will not survive a future split into separate services (flagged in code comments as a Phase 11 concern — Saga pattern).
-- No pagination/filter validation beyond `@Min` on `page`/`size` — arbitrary large `size` values aren't currently capped.
+- Pagination validation currently only checks `@Min` on `page` and `size`; arbitrary large `size` values are not capped.
 - `TransferService` and `TransactionController` throw `ResponseStatusException(HttpStatus.FORBIDDEN, ...)` for ownership violations, but `GlobalExceptionHandler` currently catches it in its generic `Exception` handler and returns `500`. Add a dedicated `ResponseStatusException` handler before treating the documented `403` status as the API's actual behaviour.
 
 ---
