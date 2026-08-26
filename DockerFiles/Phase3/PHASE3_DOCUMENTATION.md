@@ -16,7 +16,7 @@
 6. [Services](#services)
 7. [API Endpoints](#api-endpoints)
 8. [Request / Response Flow](#request--response-flow)
-9. [N+1 Problem & How It's Fixed](#n1-problem--how-its-fixed)
+9. [N+1 Problem & Current Mitigation](#n1-problem--current-mitigation)
 10. [Database Indexing](#database-indexing)
 11. [Seed Data (`data.sql`)](#seed-data-datasql)
 12. [Testing Guide](#testing-guide)
@@ -27,7 +27,7 @@
 
 ## Overview
 
-Phase 3 replaces the naive "mutate a `balance` column" model from Phase 2 with a proper **double-entry ledger system** — the same pattern real banking and fintech systems use. Every movement of money (deposit, withdraw, transfer) now writes **immutable ledger rows** in addition to updating the cached wallet balance, giving the system:
+Phase 3 adds a proper **double-entry ledger system** alongside the Phase 2 cached `balance` column. Every movement of money (deposit, withdraw, transfer) writes **immutable ledger rows** and updates the cached wallet balance, giving the system:
 
 - An **auditable trail** of every rupee that ever moved
 - The ability to **reconcile** a wallet's balance independently of the cached column
@@ -38,7 +38,7 @@ Phase 3 replaces the naive "mutate a `balance` column" model from Phase 2 with a
 - `LedgerEntry` — immutable DEBIT/CREDIT rows
 - `Beneficiary` — saved payees per user
 - Transaction history endpoint with date range, amount range, and pagination
-- N+1 query fix via `@EntityGraph`
+- Initial N+1 mitigation for wallet references via `@EntityGraph`
 - Database indexes on `wallet_id` and `created_at`
 
 ---
@@ -68,7 +68,7 @@ Transaction (1) ──1:M── LedgerEntry (exactly 2 for TRANSFER, exactly 1 f
 ```
 
 **Key relationships:**
-- `User` 1:1 `Wallet` — every customer has exactly one wallet
+- `User` 1:1 `Wallet` — customer registrations create one wallet; operator/admin users may have no wallet
 - `User` 1:M `Beneficiary` — a user can save many payees
 - `Wallet` 1:M `LedgerEntry` — every ledger row belongs to exactly one wallet
 - `Transaction` 1:M `LedgerEntry` — a TRANSFER produces 2 rows (debit + credit), DEPOSIT/WITHDRAW produce 1
@@ -307,7 +307,7 @@ Thin wrapper: verifies the wallet exists, then delegates to `TransactionReposito
 | Status | Cause |
 |---|---|
 | 400 | `fromWalletId == toWalletId` |
-| 403 | Caller doesn't own `fromWallet` |
+| 500 (current) | Caller doesn't own `fromWallet`; the intended API status is 403, but the global exception handler currently maps it to 500 |
 | 404 | Either wallet not found |
 | 409 | Insufficient balance |
 
@@ -351,7 +351,7 @@ Thin wrapper: verifies the wallet exists, then delegates to `TransactionReposito
 }
 ```
 
-Ownership is enforced the same way as `WalletController` — admins bypass the check, regular users can only view their own wallet's history (403 otherwise).
+Ownership is enforced the same way as `WalletController` — admins bypass the check and regular users can only view their own wallet's history. The intended rejection status is 403; the current global exception handler returns 500 for this `ResponseStatusException`.
 
 ---
 
@@ -410,16 +410,16 @@ Client → GET /api/wallets/1/transactions?page=0&size=10
 
 ---
 
-## N+1 Problem & How It's Fixed
+## N+1 Problem & Current Mitigation
 
-**The problem:** `Transaction.fromWallet` and `Transaction.toWallet` are `@ManyToOne` (lazy by default in this codebase's convention). If you fetch a page of 10 transactions and then access `.getFromWallet().getId()` on each, naive JPA fires:
+**The problem:** transaction history maps both wallet references and ledger entries. Without eager fetching, accessing related entities across a page can cause additional queries per transaction.
 
 - 1 query for the page of transactions
 - **+10 more queries**, one per transaction, to lazily load each `fromWallet`/`toWallet`
 
 That's the N+1 problem — 11 queries instead of 1 for a page of 10 rows, and it gets worse linearly with page size.
 
-**The fix:** `@EntityGraph(attributePaths = {"fromWallet", "toWallet"})` on `findHistory()` tells Hibernate to `JOIN FETCH` both associations in the **same** query that loads the transactions. Result: **1 query total**, regardless of page size.
+**Current mitigation:** `@EntityGraph(attributePaths = {"fromWallet", "toWallet"})` on `findHistory()` fetches the source and destination wallet associations with the history query. This reduces extra wallet reads, but it does **not** fetch `Transaction.ledgerEntries`, which are accessed when the response is built. Therefore the implementation can still issue additional ledger-entry queries for a page of transactions; it is not guaranteed to be one query total.
 
 ```java
 @EntityGraph(attributePaths = {"fromWallet", "toWallet"})
@@ -430,7 +430,7 @@ That's the N+1 problem — 11 queries instead of 1 for a page of 10 rows, and it
 Page<Transaction> findHistory(...);
 ```
 
-`LedgerEntry.wallet` (used when building `LedgerEntryResponse`) is left `FetchType.LAZY` with `@BatchSize(size = 50)` on the `Wallet.ledgerEntries` side — this batches lazy loads into groups instead of one-by-one, a lighter-weight mitigation appropriate for that access pattern.
+`LedgerEntry.wallet` is lazy. The `@BatchSize(size = 50)` annotation is on `Wallet.ledgerEntries`; it does not batch the `Transaction.ledgerEntries` collection used by the history response. A future optimisation should fetch or project the required ledger entries explicitly and measure the generated queries.
 
 ---
 
@@ -441,7 +441,6 @@ Page<Transaction> findHistory(...);
 | `ledger_entries` | `idx_ledger_wallet_id` | `wallet_id` | balance reconciliation queries filter by wallet |
 | `ledger_entries` | `idx_ledger_created_at` | `created_at` | ledger is typically read newest-first |
 | `beneficiaries` | `idx_beneficiary_user_id` | `user_id` | every beneficiary lookup is scoped to a user |
-| `transactions` | `idx_transaction_created_at` *(if present)* | `created_at` | history is sorted newest-first and often range-filtered |
 
 Without these, every history/reconciliation query would force a full table scan as data grows — fine at seed-data scale, not fine in production.
 
@@ -468,11 +467,11 @@ Every `TRANSFER` transaction has exactly 2 ledger rows (1 DEBIT + 1 CREDIT); eve
 | # | Scenario | Expected |
 |---|---|---|
 | 1 | Transfer between own wallets | 400 (self-transfer blocked) |
-| 2 | Transfer from wallet you don't own | 403 |
+| 2 | Transfer from wallet you don't own | Currently 500; intended API status is 403 (see known limitations) |
 | 3 | Transfer more than balance | 409 |
 | 4 | Valid transfer | 201, 2 ledger rows created, both balances updated |
 | 5 | View own wallet's history | 200, paginated results |
-| 6 | View another user's wallet history (non-admin) | 403 |
+| 6 | View another user's wallet history (non-admin) | Currently 500; intended API status is 403 (see known limitations) |
 | 7 | Admin views any wallet's history | 200 |
 | 8 | Filter history by date range / amount range | Only matching rows returned |
 | 9 | Add own wallet as beneficiary | 400 |
@@ -489,6 +488,7 @@ Every `TRANSFER` transaction has exactly 2 ledger rows (1 DEBIT + 1 CREDIT); eve
 - `Wallet.balance` is a **cached** value updated alongside ledger writes, not derived on every read — if the two ever drift (e.g. a bug, a manual DB edit), nothing currently auto-corrects it. `LedgerEntryRepository.calculateBalance()` exists for manual/scheduled reconciliation but isn't wired into an automated job yet.
 - The `@Transactional` guarantee in `TransferService` only holds because both wallets live in the **same database**. It will not survive a future split into separate services (flagged in code comments as a Phase 11 concern — Saga pattern).
 - No pagination/filter validation beyond `@Min` on `page`/`size` — arbitrary large `size` values aren't currently capped.
+- `TransferService` and `TransactionController` throw `ResponseStatusException(HttpStatus.FORBIDDEN, ...)` for ownership violations, but `GlobalExceptionHandler` currently catches it in its generic `Exception` handler and returns `500`. Add a dedicated `ResponseStatusException` handler before treating the documented `403` status as the API's actual behaviour.
 
 ---
 
