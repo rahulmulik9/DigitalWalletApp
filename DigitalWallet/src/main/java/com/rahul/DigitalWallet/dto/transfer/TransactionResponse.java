@@ -1,5 +1,6 @@
 package com.rahul.DigitalWallet.dto.transfer;
 
+import com.rahul.DigitalWallet.dto.ledger.LedgerEntryResponse;
 import com.rahul.DigitalWallet.entity.TransactionStatus;
 import com.rahul.DigitalWallet.entity.TransactionType;
 import lombok.AllArgsConstructor;
@@ -10,6 +11,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -24,4 +26,5 @@ public class TransactionResponse {
     private TransactionType type;
     private TransactionStatus status;
     private LocalDateTime createdAt;
+    private List<LedgerEntryResponse> ledgerEntries;
 }

@@ -9,6 +9,8 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "transactions")
@@ -52,5 +54,14 @@ public class Transaction {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+    }
+
+    @OneToMany(mappedBy = "transaction", cascade = CascadeType.PERSIST)
+    @OrderBy("createdAt ASC")
+    @Builder.Default
+    private List<LedgerEntry> ledgerEntries = new ArrayList<>();
+
+    public void addLedgerEntry(LedgerEntry entry) {
+        ledgerEntries.add(entry);
     }
 }
