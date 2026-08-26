@@ -11,9 +11,11 @@ import com.rahul.DigitalWallet.exception.ResourceNotFoundException;
 import com.rahul.DigitalWallet.repository.UserRepository;
 import com.rahul.DigitalWallet.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 
@@ -70,6 +72,27 @@ public class UserService {
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .walletId(walletId)
+                .build();
+    }
+
+    public LoginResponse refreshAccessToken(String refreshToken) {
+        if (!jwtTokenProvider.isTokenValid(refreshToken)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired refresh token");
+        }
+
+        String email = jwtTokenProvider.extractEmail(refreshToken);
+
+        // confirm the user still exists — covers the case where an account
+        // was deleted/disabled after the refresh token was issued
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User no longer exists"));
+
+        String newAccessToken = jwtTokenProvider.generateAccessToken(user.getEmail());
+
+        return LoginResponse.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(refreshToken)   // same refresh token, unchanged — only access token rotates
+                .tokenType("Bearer")
                 .build();
     }
 }
