@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: postgres-digital-wallet
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: DigitalWallet
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_digital_wallet_data:/var/lib/postgresql
+
+volumes:
+  postgres_digital_wallet_data:
