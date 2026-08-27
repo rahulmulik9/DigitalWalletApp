@@ -20,7 +20,6 @@ import org.springframework.web.server.ResponseStatusException;
 public class WalletController {
 
     private final WalletService walletService;
-
     private final SecurityUtils securityUtils;
 
     @GetMapping("/{walletId}")
@@ -30,6 +29,15 @@ public class WalletController {
         return ResponseEntity.ok(toResponse(wallet));
     }
 
+    // Internal, service-to-service only — no ownership check.
+    // Used by Transaction Service to look up ANY wallet (source, destination,
+    // beneficiary's wallet) regardless of who the original caller is.
+    // Known Phase 5 simplification: not gateway-protected yet.
+    @GetMapping("/{walletId}/internal")
+    public ResponseEntity<WalletResponse> getWalletInternal(@PathVariable Long walletId) {
+        Wallet wallet = walletService.getWallet(walletId);
+        return ResponseEntity.ok(toResponse(wallet));
+    }
 
     @PostMapping("/{walletId}/deposit")
     public ResponseEntity<WalletResponse> deposit(@PathVariable Long walletId, @Valid @RequestBody AmountRequest request) {
@@ -47,30 +55,38 @@ public class WalletController {
         return ResponseEntity.ok(toResponse(updated));
     }
 
-    private void verifyOwnership(Wallet wallet) {
+    // Internal — called only by Transaction Service during a transfer.
+    @PostMapping("/{walletId}/debit")
+    public ResponseEntity<Void> debit(@PathVariable Long walletId, @Valid @RequestBody AmountRequest request) {
+        Wallet wallet = walletService.getWallet(walletId);
+        walletService.withdraw(wallet, request.getAmount());
+        return ResponseEntity.ok().build();
+    }
 
+    // Internal — called only by Transaction Service during a transfer.
+    @PostMapping("/{walletId}/credit")
+    public ResponseEntity<Void> credit(@PathVariable Long walletId, @Valid @RequestBody AmountRequest request) {
+        Wallet wallet = walletService.getWallet(walletId);
+        walletService.deposit(wallet, request.getAmount());
+        return ResponseEntity.ok().build();
+    }
+
+    private void verifyOwnership(Wallet wallet) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        boolean isAdmin = authentication.getAuthorities()
-                        .stream()
-                        .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
-
-        if (isAdmin) {
-            return;
-        }
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+        if (isAdmin) return;
 
         String currentEmail = securityUtils.getCurrentUserEmail();
-
         if (!currentEmail.equals(wallet.getUser().getEmail())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied: wallet does not belong to you"
-            );
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied: wallet does not belong to you");
         }
     }
 
-
     private WalletResponse toResponse(Wallet wallet) {
         return WalletResponse.builder()
-                .walletId(wallet.getId())
+                .id(wallet.getId())
                 .userId(wallet.getUser().getId())
                 .balance(wallet.getBalance())
                 .currency(wallet.getCurrency())

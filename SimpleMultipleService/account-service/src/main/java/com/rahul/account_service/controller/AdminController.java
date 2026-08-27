@@ -29,9 +29,8 @@ public class AdminController {
     }
 
     private WalletResponse toResponse(Wallet wallet) {
-
         return WalletResponse.builder()
-                .walletId(wallet.getId())
+                .id(wallet.getId())
                 .userId(wallet.getUser().getId())
                 .balance(wallet.getBalance())
                 .currency(wallet.getCurrency())

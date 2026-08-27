@@ -62,11 +62,11 @@ public class UserService {
             throw new ResourceNotFoundException("Invalid email or password");
         }
 
-        String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail());
-
-        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail());
-
         Long walletId = user.getWallet() != null ? user.getWallet().getId() : null;
+        String role = user.getRole().name();
+
+        String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail(), user.getId(), walletId, role);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail(), user.getId(), walletId, role);
 
         return LoginResponse.builder()
                 .accessToken(accessToken)
@@ -83,16 +83,17 @@ public class UserService {
 
         String email = jwtTokenProvider.extractEmail(refreshToken);
 
-        // confirm the user still exists — covers the case where an account
-        // was deleted/disabled after the refresh token was issued
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User no longer exists"));
 
-        String newAccessToken = jwtTokenProvider.generateAccessToken(user.getEmail());
+        Long walletId = user.getWallet() != null ? user.getWallet().getId() : null;
+        String role = user.getRole().name();
+
+        String newAccessToken = jwtTokenProvider.generateAccessToken(user.getEmail(), user.getId(), walletId, role);
 
         return LoginResponse.builder()
                 .accessToken(newAccessToken)
-                .refreshToken(refreshToken)   // same refresh token, unchanged — only access token rotates
+                .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .build();
     }

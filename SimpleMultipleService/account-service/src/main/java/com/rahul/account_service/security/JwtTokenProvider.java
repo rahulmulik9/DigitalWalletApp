@@ -16,51 +16,43 @@ public class JwtTokenProvider {
     private String secret;
 
     private static final long ACCESS_TOKEN_VALIDITY_MS = 15 * 60 * 1000;
-
     private static final long REFRESH_TOKEN_VALIDITY_MS = 7 * 24 * 60 * 60 * 1000;
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
-    public String generateAccessToken(String email) {
-        return buildToken(email, ACCESS_TOKEN_VALIDITY_MS);
+    public String generateAccessToken(String email, Long userId, Long walletId, String role) {
+        return buildToken(email, userId, walletId, role, ACCESS_TOKEN_VALIDITY_MS);
     }
 
-    public String generateRefreshToken(String email) {
-        return buildToken(email, REFRESH_TOKEN_VALIDITY_MS);
+    public String generateRefreshToken(String email, Long userId, Long walletId, String role) {
+        return buildToken(email, userId, walletId, role, REFRESH_TOKEN_VALIDITY_MS);
     }
 
-
-    private String buildToken(String email, long validityMs) {
+    private String buildToken(String email, Long userId, Long walletId, String role, long validityMs) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + validityMs);
 
         return Jwts.builder()
                 .subject(email)
+                .claim("userId", userId)
+                .claim("walletId", walletId)
+                .claim("role", role)
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
-
     public String extractEmail(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .getSubject();
+        return Jwts.parser().verifyWith(getSigningKey()).build()
+                .parseSignedClaims(token).getPayload().getSubject();
     }
-
 
     public boolean isTokenValid(String token) {
         try {
-            Jwts.parser()
-                    .verifyWith(getSigningKey())
-                    .build()
-                    .parseSignedClaims(token);
+            Jwts.parser().verifyWith(getSigningKey()).build().parseSignedClaims(token);
             return true;
         } catch (Exception e) {
             return false;
@@ -68,13 +60,7 @@ public class JwtTokenProvider {
     }
 
     public long getExpirationTime(String token) {
-
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .getExpiration()
-                .getTime();
+        return Jwts.parser().verifyWith(getSigningKey()).build()
+                .parseSignedClaims(token).getPayload().getExpiration().getTime();
     }
 }

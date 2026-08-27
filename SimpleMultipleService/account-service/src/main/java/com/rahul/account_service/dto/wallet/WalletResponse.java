@@ -14,7 +14,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class WalletResponse {
-    private Long walletId;
+    private Long id;
     private Long userId;
     private BigDecimal balance;
     private String currency;
