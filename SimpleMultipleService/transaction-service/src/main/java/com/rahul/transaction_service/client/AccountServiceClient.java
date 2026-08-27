@@ -22,7 +22,7 @@ public class AccountServiceClient {
     public WalletResponse getWallet(Long walletId) {
         try {
             return restTemplate.getForObject(
-                    accountServiceUrl + "/api/wallets/" + walletId,
+                    accountServiceUrl + "/api/wallets/" + walletId + "/internal",
                     WalletResponse.class
             );
         } catch (HttpClientErrorException.NotFound e) {
