@@ -17,6 +17,8 @@ spring:
   sql:
     init:
       mode: always
+      data-locations: classpath:account-service-data.sql
+
 
 server:
   port: 8081
