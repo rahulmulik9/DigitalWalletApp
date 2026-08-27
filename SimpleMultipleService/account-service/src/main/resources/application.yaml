@@ -3,7 +3,9 @@ spring:
     name: account-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/AccountService
+#    url: jdbc:postgresql://localhost:5433/AccountService  #for local machine
+    #for docer
+    url: jdbc:postgresql://account-db:5432/AccountService
     username: root
     password: root
     driver-class-name: org.postgresql.Driver
