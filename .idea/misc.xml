@@ -5,6 +5,7 @@
     <option name="originalFiles">
       <list>
         <option value="$PROJECT_DIR$/DigitalWallet/pom.xml" />
+        <option value="$PROJECT_DIR$/Monolithic/DigitalWallet/pom.xml" />
       </list>
     </option>
   </component>
