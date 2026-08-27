@@ -6,6 +6,8 @@
       <list>
         <option value="$PROJECT_DIR$/DigitalWallet/pom.xml" />
         <option value="$PROJECT_DIR$/Monolithic/DigitalWallet/pom.xml" />
+        <option value="$PROJECT_DIR$/SimpleMultipleService/account-service/pom.xml" />
+        <option value="$PROJECT_DIR$/SimpleMultipleService/transaction-service/pom.xml" />
       </list>
     </option>
   </component>
