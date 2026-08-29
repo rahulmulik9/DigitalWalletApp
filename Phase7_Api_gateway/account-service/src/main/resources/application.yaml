@@ -37,6 +37,6 @@ eureka:
   client:
     service-url:
 #      defaultZone: http://localhost:8761/eureka/   #for local machine
-       defaultZone: http://eureka-server:8761/eureka/   #for docker
+      defaultZone: http://eureka-server:8761/eureka/   #for docker
   instance:
     prefer-ip-address: true

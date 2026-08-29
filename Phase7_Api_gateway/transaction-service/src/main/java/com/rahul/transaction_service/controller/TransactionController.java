@@ -23,7 +23,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @RestController
-@RequestMapping("/api/wallets")
+@RequestMapping("/api/transactions")
 @RequiredArgsConstructor
 public class TransactionController {
 
@@ -31,7 +31,7 @@ public class TransactionController {
     private final AccountServiceClient accountServiceClient;
     private final SecurityUtils securityUtils;
 
-    @GetMapping("/{walletId}/transactions")
+    @GetMapping("/wallet/{walletId}")
     public ResponseEntity<Page<TransactionResponse>> history(
             @PathVariable Long walletId,
             @RequestParam(defaultValue = "0") @Min(0) int page,
@@ -44,7 +44,7 @@ public class TransactionController {
         return ResponseEntity.ok(transactions.map(this::toResponse));
     }
 
-    @GetMapping("/{walletId}/transactions/filter")
+    @GetMapping("/wallet/{walletId}/filter")
     public ResponseEntity<Page<TransactionResponse>> filteredHistory(
             @PathVariable Long walletId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
