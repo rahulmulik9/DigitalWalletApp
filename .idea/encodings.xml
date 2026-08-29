@@ -2,11 +2,15 @@
 <project version="4">
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/DigitalWallet/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/Eureka/account-service/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/Eureka/eureka-server/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/Eureka/transaction-service/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/Monolithic/DigitalWallet/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/SimpleMultipleService/account-service/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/SimpleMultipleService/transaction-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase1-4_Monolithic/DigitalWallet/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase5_SimpleMultipleService/account-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase5_SimpleMultipleService/transaction-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase6_Eureka/account-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase6_Eureka/eureka-server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase6_Eureka/transaction-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase7_Api_gateway/account-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase7_Api_gateway/api-gateway-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase7_Api_gateway/eureka-server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase7_Api_gateway/transaction-service/src/main/java" charset="UTF-8" />
   </component>
 </project>

@@ -9,7 +9,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="eureka-server" />
       </profile>
-      <profile name="Annotation profile for transaction-service" enabled="true">
+      <profile name="Annotation profile for api-gateway-service" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
@@ -17,15 +17,19 @@
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.46/lombok-1.18.46.jar" />
         </processorPath>
         <module name="account-service" />
+        <module name="api-gateway-service" />
         <module name="transaction-service" />
-        <module name="DigitalWallet" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="DigitalWallet" target="17" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="DigitalWallet" options="-parameters" />
       <module name="account-service" options="-parameters" />
+      <module name="api-gateway-service" options="-parameters" />
       <module name="eureka-server" options="-parameters" />
       <module name="transaction-service" options="-parameters" />
     </option>
