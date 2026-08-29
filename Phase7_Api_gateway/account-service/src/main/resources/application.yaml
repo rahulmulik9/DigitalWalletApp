@@ -3,9 +3,9 @@ spring:
     name: account-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/AccountService  #for local machine
+#    url: jdbc:postgresql://localhost:5433/AccountService  #for local machine
     #for docker
-#    url: jdbc:postgresql://account-db:5432/AccountService
+    url: jdbc:postgresql://account-db:5432/AccountService
     username: root
     password: root
     driver-class-name: org.postgresql.Driver
@@ -36,7 +36,7 @@ jwt:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/   #for local machine
-#       defaultZone: http://eureka-server:8761/eureka/   #for docker
+#      defaultZone: http://localhost:8761/eureka/   #for local machine
+      defaultZone: http://eureka-server:8761/eureka/   #for docker
   instance:
     prefer-ip-address: true
