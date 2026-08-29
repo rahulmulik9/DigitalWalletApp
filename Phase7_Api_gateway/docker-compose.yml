@@ -23,30 +23,30 @@ services:
     volumes:
       - transaction_db_data:/var/lib/postgresql
 
-  eureka-server:
-    image: eureka-server:latest
-    container_name: eureka-server
-    ports:
-      - "8761:8761"
-
-  account-service:
-    image: account-service:latest
-    container_name: account-service
-    depends_on:
-      - account-db
-      - eureka-server
-    ports:
-      - "8081:8081"
-
-  transaction-service:
-    image: transaction-service:latest
-    container_name: transaction-service
-    depends_on:
-      - transaction-db
-      - account-service
-      - eureka-server
-    ports:
-      - "8082:8082"
+#  eureka-server:
+#    image: eureka-server:latest
+#    container_name: eureka-server
+#    ports:
+#      - "8761:8761"
+#
+#  account-service:
+#    image: account-service:latest
+#    container_name: account-service
+#    depends_on:
+#      - account-db
+#      - eureka-server
+#    ports:
+#      - "8081:8081"
+#
+#  transaction-service:
+#    image: transaction-service:latest
+#    container_name: transaction-service
+#    depends_on:
+#      - transaction-db
+#      - account-service
+#      - eureka-server
+#    ports:
+#      - "8082:8082"
 
 volumes:
   account_db_data:

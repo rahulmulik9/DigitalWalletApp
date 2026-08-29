@@ -12,7 +12,8 @@ spring:
             - id: account-service
               uri: lb://account-service
               predicates:
-                - Path=/api/users/**,/api/wallets/**,/api/admin/**
+                - Path=/api/users/**,/api/auth/**,/api/admin/**,/api/wallets/**
+
             - id: transaction-service
               uri: lb://transaction-service
               predicates:

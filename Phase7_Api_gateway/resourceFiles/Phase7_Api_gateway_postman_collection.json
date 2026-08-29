@@ -1,70 +1,14 @@
 {
   "info": {
-    "_postman_id": "digital-wallet-phase-3-advanced-jpa-ledger",
-    "name": "PayFlow API - Phase 5 (Account Service + Transaction Service)",
-    "description": "Complete Postman collection for every API currently exposed by the DigitalWallet application. It includes user/authentication, wallet operations, ledger-enabled transfers, transaction history, beneficiaries, and admin operations. Seeded local users: rahul@gmail.com and admin@gmail.com; both use password123. Rahul owns wallet 1; wallets 2 and 3 belong to other users.",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "_postman_id": "7a2c9e14-5f3b-4d21-9c8a-3e1f6b8d4a90",
+    "name": "Phase 7 (API Gateway)",
+    "description": "Complete Postman collection for the DigitalWallet application, updated for Phase 7. All requests now go through the API Gateway on http://localhost:8080 instead of hitting account-service (8081) or transaction-service (8082) directly. The gateway routes /api/users/**, /api/auth/**, /api/wallets/**, /api/admin/** to account-service, and /api/transactions/**, /api/transfers/**, /api/beneficiaries/** to transaction-service. Note: transaction history endpoints moved from /api/wallets/{id}/transactions to /api/transactions/wallet/{id} to remove a path collision with account-service's /api/wallets/** routes. Seeded local users: rahul@gmail.com and admin@gmail.com; both use password123. Rahul owns wallet 1; wallets 2 and 3 belong to other users.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "29215909"
   },
-  "variable": [
-    {
-      "key": "accountServiceUrl",
-      "value": "http://localhost:8081",
-      "type": "string"
-    },
-    {
-      "key": "transactionServiceUrl",
-      "value": "http://localhost:8082",
-      "type": "string"
-    },
-    {
-      "key": "accessToken",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "walletId",
-      "value": "1",
-      "type": "string"
-    },
-    {
-      "key": "otherWalletId",
-      "value": "2",
-      "type": "string"
-    },
-    {
-      "key": "beneficiaryWalletId",
-      "value": "2",
-      "type": "string"
-    },
-    {
-      "key": "beneficiaryId",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "refreshToken",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "adminAccessToken",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "adminRefreshToken",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "newUserEmail",
-      "value": "postman-test@example.com",
-      "type": "string"
-    }
-  ],
   "item": [
     {
-      "name": "Account Service",
+      "name": "Account Service (via Gateway)",
       "item": [
         {
           "name": "User and authentication operations",
@@ -89,9 +33,9 @@
                   }
                 },
                 "url": {
-                  "raw": "{{accountServiceUrl}}/api/users/register",
+                  "raw": "{{gatewayUrl}}/api/users/register",
                   "host": [
-                    "{{accountServiceUrl}}"
+                    "{{gatewayUrl}}"
                   ],
                   "path": [
                     "api",
@@ -99,7 +43,8 @@
                     "register"
                   ]
                 }
-              }
+              },
+              "response": []
             },
             {
               "name": "Login (Customer - Rahul)",
@@ -138,9 +83,9 @@
                   }
                 },
                 "url": {
-                  "raw": "{{accountServiceUrl}}/api/users/login",
+                  "raw": "{{gatewayUrl}}/api/users/login",
                   "host": [
-                    "{{accountServiceUrl}}"
+                    "{{gatewayUrl}}"
                   ],
                   "path": [
                     "api",
@@ -148,7 +93,8 @@
                     "login"
                   ]
                 }
-              }
+              },
+              "response": []
             },
             {
               "name": "Login (Admin)",
@@ -184,9 +130,9 @@
                   }
                 },
                 "url": {
-                  "raw": "{{accountServiceUrl}}/api/users/login",
+                  "raw": "{{gatewayUrl}}/api/users/login",
                   "host": [
-                    "{{accountServiceUrl}}"
+                    "{{gatewayUrl}}"
                   ],
                   "path": [
                     "api",
@@ -194,7 +140,8 @@
                     "login"
                   ]
                 }
-              }
+              },
+              "response": []
             },
             {
               "name": "Refresh Customer Access Token",
@@ -229,9 +176,9 @@
                   }
                 },
                 "url": {
-                  "raw": "{{accountServiceUrl}}/api/auth/refresh",
+                  "raw": "{{gatewayUrl}}/api/auth/refresh",
                   "host": [
-                    "{{accountServiceUrl}}"
+                    "{{gatewayUrl}}"
                   ],
                   "path": [
                     "api",
@@ -239,7 +186,8 @@
                     "refresh"
                   ]
                 }
-              }
+              },
+              "response": []
             }
           ]
         },
@@ -257,9 +205,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{accountServiceUrl}}/api/wallets/{{walletId}}",
+                  "raw": "{{gatewayUrl}}/api/wallets/{{walletId}}",
                   "host": [
-                    "{{accountServiceUrl}}"
+                    "{{gatewayUrl}}"
                   ],
                   "path": [
                     "api",
@@ -267,7 +215,8 @@
                     "{{walletId}}"
                   ]
                 }
-              }
+              },
+              "response": []
             },
             {
               "name": "Deposit Money",
@@ -293,9 +242,9 @@
                   }
                 },
                 "url": {
-                  "raw": "{{accountServiceUrl}}/api/wallets/{{walletId}}/deposit",
+                  "raw": "{{gatewayUrl}}/api/wallets/{{walletId}}/deposit",
                   "host": [
-                    "{{accountServiceUrl}}"
+                    "{{gatewayUrl}}"
                   ],
                   "path": [
                     "api",
@@ -304,7 +253,8 @@
                     "deposit"
                   ]
                 }
-              }
+              },
+              "response": []
             },
             {
               "name": "Withdraw Money",
@@ -330,9 +280,9 @@
                   }
                 },
                 "url": {
-                  "raw": "{{accountServiceUrl}}/api/wallets/{{walletId}}/withdraw",
+                  "raw": "{{gatewayUrl}}/api/wallets/{{walletId}}/withdraw",
                   "host": [
-                    "{{accountServiceUrl}}"
+                    "{{gatewayUrl}}"
                   ],
                   "path": [
                     "api",
@@ -341,7 +291,8 @@
                     "withdraw"
                   ]
                 }
-              }
+              },
+              "response": []
             }
           ]
         },
@@ -370,9 +321,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{accountServiceUrl}}/api/admin/wallets",
+                  "raw": "{{gatewayUrl}}/api/admin/wallets",
                   "host": [
-                    "{{accountServiceUrl}}"
+                    "{{gatewayUrl}}"
                   ],
                   "path": [
                     "api",
@@ -380,7 +331,8 @@
                     "wallets"
                   ]
                 }
-              }
+              },
+              "response": []
             }
           ]
         },
@@ -411,9 +363,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{accountServiceUrl}}/api/users/logout",
+                  "raw": "{{gatewayUrl}}/api/users/logout",
                   "host": [
-                    "{{accountServiceUrl}}"
+                    "{{gatewayUrl}}"
                   ],
                   "path": [
                     "api",
@@ -421,18 +373,19 @@
                     "logout"
                   ]
                 }
-              }
+              },
+              "response": []
             }
           ]
         }
       ],
-      "description": "Runs on http://localhost:8081 \u2014 owns Users, Wallets, Auth, Admin."
+      "description": "Owns Users, Wallets, Auth, Admin. Runs on http://localhost:8081 internally, but every request in this collection goes through the gateway at {{gatewayUrl}} instead."
     },
     {
-      "name": "Transaction Service",
+      "name": "Transaction Service (via Gateway)",
       "item": [
         {
-          "name": "Phase 5 - Ledger-enabled transfer",
+          "name": "Ledger-enabled transfer",
           "item": [
             {
               "name": "Transfer Money (creates debit and credit ledger entries)",
@@ -477,21 +430,22 @@
                   }
                 },
                 "url": {
-                  "raw": "{{transactionServiceUrl}}/api/transfers",
+                  "raw": "{{gatewayUrl}}/api/transfers",
                   "host": [
-                    "{{transactionServiceUrl}}"
+                    "{{gatewayUrl}}"
                   ],
                   "path": [
                     "api",
                     "transfers"
                   ]
                 }
-              }
+              },
+              "response": []
             }
           ]
         },
         {
-          "name": "Phase 5 - Transaction history and ledger",
+          "name": "Transaction history and ledger",
           "item": [
             {
               "name": "Get Transaction History (includes ledger entries)",
@@ -526,15 +480,15 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{transactionServiceUrl}}/api/wallets/{{walletId}}/transactions?page=0&size=10",
+                  "raw": "{{gatewayUrl}}/api/transactions/wallet/{{walletId}}?page=0&size=10",
                   "host": [
-                    "{{transactionServiceUrl}}"
+                    "{{gatewayUrl}}"
                   ],
                   "path": [
                     "api",
-                    "wallets",
-                    "{{walletId}}",
-                    "transactions"
+                    "transactions",
+                    "wallet",
+                    "{{walletId}}"
                   ],
                   "query": [
                     {
@@ -547,7 +501,8 @@
                     }
                   ]
                 }
-              }
+              },
+              "response": []
             },
             {
               "name": "Get Filtered Transaction History (date and amount)",
@@ -579,15 +534,15 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{transactionServiceUrl}}/api/wallets/{{walletId}}/transactions/filter?fromDate=2020-01-01T00:00:00&toDate=2030-01-01T23:59:59&minAmount=1&maxAmount=10000&page=0&size=10",
+                  "raw": "{{gatewayUrl}}/api/transactions/wallet/{{walletId}}/filter?fromDate=2020-01-01T00:00:00&toDate=2030-01-01T23:59:59&minAmount=1&maxAmount=10000&page=0&size=10",
                   "host": [
-                    "{{transactionServiceUrl}}"
+                    "{{gatewayUrl}}"
                   ],
                   "path": [
                     "api",
-                    "wallets",
-                    "{{walletId}}",
                     "transactions",
+                    "wallet",
+                    "{{walletId}}",
                     "filter"
                   ],
                   "query": [
@@ -617,12 +572,13 @@
                     }
                   ]
                 }
-              }
+              },
+              "response": []
             }
           ]
         },
         {
-          "name": "Phase 5 - Beneficiaries",
+          "name": "Beneficiaries",
           "item": [
             {
               "name": "Create Beneficiary",
@@ -665,16 +621,17 @@
                   }
                 },
                 "url": {
-                  "raw": "{{transactionServiceUrl}}/api/beneficiaries",
+                  "raw": "{{gatewayUrl}}/api/beneficiaries",
                   "host": [
-                    "{{transactionServiceUrl}}"
+                    "{{gatewayUrl}}"
                   ],
                   "path": [
                     "api",
                     "beneficiaries"
                   ]
                 }
-              }
+              },
+              "response": []
             },
             {
               "name": "Get My Beneficiaries",
@@ -701,16 +658,17 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{transactionServiceUrl}}/api/beneficiaries",
+                  "raw": "{{gatewayUrl}}/api/beneficiaries",
                   "host": [
-                    "{{transactionServiceUrl}}"
+                    "{{gatewayUrl}}"
                   ],
                   "path": [
                     "api",
                     "beneficiaries"
                   ]
                 }
-              }
+              },
+              "response": []
             },
             {
               "name": "Delete Created Beneficiary",
@@ -737,9 +695,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{transactionServiceUrl}}/api/beneficiaries/{{beneficiaryId}}",
+                  "raw": "{{gatewayUrl}}/api/beneficiaries/{{beneficiaryId}}",
                   "host": [
-                    "{{transactionServiceUrl}}"
+                    "{{gatewayUrl}}"
                   ],
                   "path": [
                     "api",
@@ -747,12 +705,128 @@
                     "{{beneficiaryId}}"
                   ]
                 }
-              }
+              },
+              "response": []
             }
           ]
         }
       ],
-      "description": "Runs on http://localhost:8082 \u2014 owns Transfers, Transaction History, Beneficiaries."
+      "description": "Owns Transfers, Transaction History, Beneficiaries. Runs on http://localhost:8082 internally, but every request in this collection goes through the gateway at {{gatewayUrl}} instead. Transaction history moved from /api/wallets/{id}/transactions to /api/transactions/wallet/{id} in Phase 7 to remove a path collision with account-service."
+    },
+    {
+      "name": "Direct-to-service (debugging only, bypasses gateway)",
+      "item": [
+        {
+          "name": "Get My Wallet (direct, port 8081)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{accountServiceUrl}}/api/wallets/{{walletId}}",
+              "host": [
+                "{{accountServiceUrl}}"
+              ],
+              "path": [
+                "api",
+                "wallets",
+                "{{walletId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Transaction History (direct, port 8082)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{transactionServiceUrl}}/api/transactions/wallet/{{walletId}}?page=0&size=10",
+              "host": [
+                "{{transactionServiceUrl}}"
+              ],
+              "path": [
+                "api",
+                "transactions",
+                "wallet",
+                "{{walletId}}"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Kept only for local debugging when you need to bypass the gateway and confirm whether a problem is in the gateway or in the underlying service itself. Not part of the normal Phase 7 test flow — the two folders above are what you should run day to day."
+    }
+  ],
+  "variable": [
+    {
+      "key": "gatewayUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "accountServiceUrl",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "transactionServiceUrl",
+      "value": "http://localhost:8082"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "walletId",
+      "value": "1"
+    },
+    {
+      "key": "otherWalletId",
+      "value": "2"
+    },
+    {
+      "key": "beneficiaryWalletId",
+      "value": "2"
+    },
+    {
+      "key": "beneficiaryId",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    },
+    {
+      "key": "adminAccessToken",
+      "value": ""
+    },
+    {
+      "key": "adminRefreshToken",
+      "value": ""
+    },
+    {
+      "key": "newUserEmail",
+      "value": "postman-test@example.com"
     }
   ]
 }
