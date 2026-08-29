@@ -6,8 +6,9 @@
       <list>
         <option value="$PROJECT_DIR$/DigitalWallet/pom.xml" />
         <option value="$PROJECT_DIR$/Monolithic/DigitalWallet/pom.xml" />
-        <option value="$PROJECT_DIR$/SimpleMultipleService/account-service/pom.xml" />
-        <option value="$PROJECT_DIR$/SimpleMultipleService/transaction-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Eureka/account-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Eureka/transaction-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Eureka/eureka-server/pom.xml" />
       </list>
     </option>
   </component>

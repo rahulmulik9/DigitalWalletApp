@@ -23,22 +23,22 @@ services:
     volumes:
       - transaction_db_data:/var/lib/postgresql
 
-  account-service:
-    image: account-service:latest
-    container_name: account-service
-    depends_on:
-      - account-db
-    ports:
-      - "8081:8081"
-
-  transaction-service:
-    image: transaction-service:latest
-    container_name: transaction-service
-    depends_on:
-      - transaction-db
-      - account-service
-    ports:
-      - "8082:8082"
+#  account-service:
+#    image: account-service:latest
+#    container_name: account-service
+#    depends_on:
+#      - account-db
+#    ports:
+#      - "8081:8081"
+#
+#  transaction-service:
+#    image: transaction-service:latest
+#    container_name: transaction-service
+#    depends_on:
+#      - transaction-db
+#      - account-service
+#    ports:
+#      - "8082:8082"
 
 volumes:
   account_db_data:
