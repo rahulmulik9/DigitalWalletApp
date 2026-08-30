@@ -5,10 +5,6 @@
     <option name="originalFiles">
       <list>
         <option value="$PROJECT_DIR$/DigitalWallet/pom.xml" />
-        <option value="$PROJECT_DIR$/Phase7_Api_gateway/account-service/pom.xml" />
-        <option value="$PROJECT_DIR$/Phase7_Api_gateway/eureka-server/pom.xml" />
-        <option value="$PROJECT_DIR$/Phase7_Api_gateway/transaction-service/pom.xml" />
-        <option value="$PROJECT_DIR$/Phase7_Api_gateway/api-gateway-service/pom.xml" />
       </list>
     </option>
   </component>
