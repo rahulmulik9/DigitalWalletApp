@@ -27,7 +27,8 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
     private static final List<String> PUBLIC_PATHS = List.of(
             "/api/users/register",
             "/api/users/login",
-            "/api/auth/refresh"
+            "/api/auth/refresh",
+            "/actuator/health"
     );
 
     @Override
