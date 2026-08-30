@@ -23,9 +23,20 @@ services:
     volumes:
       - transaction_db_data:/var/lib/postgresql
 
+  config-server:
+    image: config-server:latest
+    container_name: config-server
+    ports:
+      - "8888:8888"
+
   eureka-server:
     image: eureka-server:latest
     container_name: eureka-server
+    depends_on:
+      - config-server
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
     ports:
       - "8761:8761"
 
@@ -34,7 +45,11 @@ services:
     container_name: account-service
     depends_on:
       - account-db
+      - config-server
       - eureka-server
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
     ports:
       - "8081:8081"
 
@@ -44,7 +59,11 @@ services:
     depends_on:
       - transaction-db
       - account-service
+      - config-server
       - eureka-server
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
     ports:
       - "8082:8082"
 
@@ -52,9 +71,13 @@ services:
     image: api-gateway:latest
     container_name: api-gateway
     depends_on:
+      - config-server
       - eureka-server
       - account-service
       - transaction-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
     ports:
       - "8080:8080"
 
