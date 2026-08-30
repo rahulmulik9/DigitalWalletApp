@@ -1,0 +1,63 @@
+services:
+  account-db:
+    image: postgres:18
+    container_name: account-db
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: AccountService
+    ports:
+      - "5433:5432"
+    volumes:
+      - account_db_data:/var/lib/postgresql
+
+  transaction-db:
+    image: postgres:18
+    container_name: transaction-db
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: TransactionService
+    ports:
+      - "5434:5432"
+    volumes:
+      - transaction_db_data:/var/lib/postgresql
+
+  eureka-server:
+    image: eureka-server:latest
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+
+  account-service:
+    image: account-service:latest
+    container_name: account-service
+    depends_on:
+      - account-db
+      - eureka-server
+    ports:
+      - "8081:8081"
+
+  transaction-service:
+    image: transaction-service:latest
+    container_name: transaction-service
+    depends_on:
+      - transaction-db
+      - account-service
+      - eureka-server
+    ports:
+      - "8082:8082"
+
+  api-gateway:
+    image: api-gateway:latest
+    container_name: api-gateway
+    depends_on:
+      - eureka-server
+      - account-service
+      - transaction-service
+    ports:
+      - "8080:8080"
+
+volumes:
+  account_db_data:
+  transaction_db_data:

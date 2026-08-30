@@ -1,0 +1,31 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: account-service
+              uri: lb://account-service
+              predicates:
+                - Path=/api/users/**,/api/auth/**,/api/admin/**,/api/wallets/**
+
+            - id: transaction-service
+              uri: lb://transaction-service
+              predicates:
+                - Path=/api/transactions/**,/api/transfers/**,/api/beneficiaries/**
+
+eureka:
+  client:
+    service-url:
+#      defaultZone: http://localhost:8761/eureka/   #for local machine
+       defaultZone: http://eureka-server:8761/eureka/   #for docker
+  instance:
+    prefer-ip-address: true
+
+jwt:
+  secret: "8f2a91c6e4b7d3f0a5c8e1b4d7f0a3c6e9b2d5f8a1c4e7b0d3f6a9c2e5b8d1f4"
