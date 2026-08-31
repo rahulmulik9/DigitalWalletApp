@@ -1,9 +1,11 @@
 package com.rahul.transaction_service.client;
 
 import com.rahul.transaction_service.dto.wallet.WalletResponse;
+import com.rahul.transaction_service.exception.AccountServiceUnavailableException;
 import com.rahul.transaction_service.exception.InsufficientBalanceException;
 import com.rahul.transaction_service.exception.WalletNotFoundException;
 import feign.FeignException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -69,12 +71,32 @@ public class AccountServiceClient {
     //new feign client code
     private final AccountClient accountClient;
 
+//    public WalletResponse getWallet(Long walletId) {
+//        try {
+//            return accountClient.getWallet(walletId);
+//        } catch (FeignException.NotFound e) {
+//            throw new WalletNotFoundException("Wallet not found: " + walletId);
+//        }
+//    }
+
+
+    //accountService name must match in yml file instance in resilience4j block
+    @CircuitBreaker(name = "accountService", fallbackMethod = "getWalletFallback")
     public WalletResponse getWallet(Long walletId) {
         try {
             return accountClient.getWallet(walletId);
         } catch (FeignException.NotFound e) {
             throw new WalletNotFoundException("Wallet not found: " + walletId);
         }
+    }
+
+    // Fallback signature rule: same params as the original method, PLUS a
+    // Throwable at the end. Same return type. Resilience4j finds this by
+    // matching that exact signature via reflection - name just has to match
+    // the string in fallbackMethod above.
+    private WalletResponse getWalletFallback(Long walletId, Throwable cause) {
+        throw new AccountServiceUnavailableException(
+                "Account Service is currently unavailable for wallet " + walletId, cause);
     }
 
     public void debit(Long walletId, BigDecimal amount) {
