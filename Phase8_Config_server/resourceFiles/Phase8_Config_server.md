@@ -181,6 +181,81 @@ Server at all — it's the one exception, and it has to be.
 
 ---
 
+## 5a. Recap — why account-service alone needs 6 YAML files
+
+This confuses almost everyone the first time, so here's the short
+version, all in one place.
+
+**The one real reason:** `account-service` needs its settings (DB URL,
+Eureka URL, ports, etc.) from Config Server — but the address of Config
+Server itself is different depending on where the app is running,
+because `localhost` means "this machine" on your laptop, but means
+"this container" inside Docker. Something has to hold that difference,
+and it can't be Config Server, because you haven't reached it yet.
+
+That single fact splits the config into **two stages**, and each stage
+needs its own local vs docker version:
+
+**Stage 1 — Bootstrap: "How do I even reach Config Server?"**
+Lives in the `resources` folder, baked into the jar. Can't come from
+Config Server (chicken-and-egg). This is 3 files:
+
+- `application.yaml` — just the app name + actuator exposure, same
+  everywhere, no profile needed.
+- `application-local.yaml` — Config Server is at `localhost:8888`.
+- `application-docker.yaml` — Config Server is at `config-server:8888`
+  (the Docker Compose service name).
+
+```yaml
+spring:
+  config:
+    activate:
+      on-profile: local
+    import: "optional:configserver:http://localhost:8888"
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+    import: "optional:configserver:http://config-server:8888"
+```
+
+**Stage 2 — Runtime: "Now that I'm connected, what's my actual config?"**
+Lives in the GitHub config repo, served by Config Server. This is the
+other 3 files:
+
+- `account-service.yml` — port, JPA/DDL, SQL init, logging. Same
+  everywhere, no profile needed.
+- `account-service-local.yml` — DB at `localhost:5433`, Eureka at
+  `localhost:8761`.
+- `account-service-docker.yml` — DB at `account-db:5432`, Eureka at
+  `eureka-server:8761`.
+
+**How the two stages stay in sync:** a single environment variable,
+`SPRING_PROFILES_ACTIVE`, set once per environment:
+
+- **Local run** → IDE Run Configuration → Environment Variables →
+  `SPRING_PROFILES_ACTIVE=local`
+- **Docker run** → `docker-compose.yml` → `environment:` →
+  `SPRING_PROFILES_ACTIVE=docker`
+
+Flipping that one variable decides which resource-folder file
+activates (so it knows where Config Server is) **and** which GitHub
+file gets fetched (so it gets the right DB/Eureka addresses) — both at
+once, automatically.
+
+**Could this be fewer physical files?** Yes — each pair
+(`application-local.yaml` + `application-docker.yaml`, or
+`account-service-local.yml` + `account-service-docker.yml`) can be
+merged into a single file using YAML's `---` multi-document syntax with
+`spring.config.activate.on-profile`, as shown above. The *file count*
+is a style choice; the *concept* of "local values differ from docker
+values, and something has to hold both" is not optional — it's the
+actual reason all 6 pieces of information exist, whether they live in
+3 files, 6 files, or 2 merged files.
+
+---
+
 ## 6. What is a "Profile," in simple terms?
 
 A **profile** is just a **label** you give to a specific way of running
@@ -214,8 +289,8 @@ For **account-service**, **transaction-service**, **eureka-server**, and
 **Step 1 — `pom.xml`:** add one new dependency
 ```xml
 <dependency>
-    <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-starter-config</artifactId>
+  <groupId>org.springframework.cloud</groupId>
+  <artifactId>spring-cloud-starter-config</artifactId>
 </dependency>
 ```
 ⚠️ **After adding this, you MUST reload Maven** (right-click `pom.xml` →
@@ -248,9 +323,9 @@ other four. Its whole job is to read the Git repo and serve files.
 @SpringBootApplication
 @EnableConfigServer     // ← this one annotation turns on the whole feature
 public class ConfigServerApplication {
-    public static void main(String[] args) {
-        SpringApplication.run(ConfigServerApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(ConfigServerApplication.class, args);
+  }
 }
 ```
 
