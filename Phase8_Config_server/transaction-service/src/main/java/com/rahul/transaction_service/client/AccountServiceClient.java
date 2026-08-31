@@ -6,6 +6,7 @@ import com.rahul.transaction_service.exception.InsufficientBalanceException;
 import com.rahul.transaction_service.exception.WalletNotFoundException;
 import feign.FeignException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -106,6 +107,16 @@ public class AccountServiceClient {
 
     private final AccountClient accountClient;
 
+    // Order matters: @Retry must be OUTER (top), @CircuitBreaker must be
+// INNER (closer to the method). Each retry attempt goes through the
+// circuit breaker individually, and @Retry decides whether to try again.
+// Reversed order = each retry counts as a separate CB failure = opens too fast.
+//
+// In simple terms: @Retry auto-retries a failed call a few times before
+// giving up (like manually clicking "send" again). @CircuitBreaker
+// watches those attempts and stops trying altogether if there are too
+// many failures. One click here now secretly does up to 3 attempts.
+    @Retry(name = "accountService")
     @CircuitBreaker(name = "accountService", fallbackMethod = "getWalletFallback")
     public WalletResponse getWallet(Long walletId) {
         try {
@@ -119,7 +130,6 @@ public class AccountServiceClient {
         throw new AccountServiceUnavailableException(
                 "Account Service is currently unavailable for wallet " + walletId, cause);
     }
-
 
 
     @CircuitBreaker(name = "accountService", fallbackMethod = "debitFallback")
@@ -137,7 +147,6 @@ public class AccountServiceClient {
         throw new AccountServiceUnavailableException(
                 "Account Service is currently unavailable — debit failed for wallet " + walletId, cause);
     }
-
 
 
     // KNOWN GAP (documented since Phase 5, not fixed here): if debit() above
@@ -160,5 +169,35 @@ public class AccountServiceClient {
                 "Account Service is currently unavailable — credit failed for wallet " + walletId, cause);
     }
 
+
+    /*  =======
+    ignore-exceptions:
+          - com.rahul.transaction_service.exception.WalletNotFoundException
+          - com.rahul.transaction_service.exception.InsufficientBalanceException
+    *                     credit(walletId, amount) called
+                                |
+                +---------------+---------------+
+                |                               |
+     account-service IS UP              account-service IS DOWN
+                |                               |
+     Returns HTTP 404                No response at all
+     (wallet doesn't exist)          (connection refused / no instances)
+                |                               |
+     FeignException.NotFound          Connection-level exception
+     → caught by YOUR catch block     → NOT caught by your catch block
+                |                               |
+     You throw WalletNotFoundException  Exception passes straight through
+                |                               |
+     @CircuitBreaker checks:            @CircuitBreaker checks:
+     is this in ignore-exceptions?      is this in ignore-exceptions?
+                |                               |
+              YES                              NO
+                |                               |
+     - NOT counted as failure          - COUNTED as failure
+     - fallback NOT triggered          - if enough failures →
+     - exception continues normally      circuit OPENS
+     - client gets normal 404          - fallback triggers →
+                                          AccountServiceUnavailableException
+    * */
 
 }
