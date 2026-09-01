@@ -5,6 +5,7 @@ import com.rahul.transaction_service.exception.AccountServiceUnavailableExceptio
 import com.rahul.transaction_service.exception.InsufficientBalanceException;
 import com.rahul.transaction_service.exception.WalletNotFoundException;
 import feign.FeignException;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
@@ -118,6 +119,7 @@ public class AccountServiceClient {
 // watches those attempts and stops trying altogether if there are too
 // many failures. One click here now secretly does up to 3 attempts.
 
+    @Bulkhead(name = "accountService")
     @RateLimiter(name = "accountService")
     @Retry(name = "accountService")
     @CircuitBreaker(name = "accountService", fallbackMethod = "getWalletFallback")
