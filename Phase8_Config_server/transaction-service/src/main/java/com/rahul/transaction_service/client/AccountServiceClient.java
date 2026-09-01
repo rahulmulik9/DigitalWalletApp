@@ -1,7 +1,14 @@
 package com.rahul.transaction_service.client;
 
 import com.rahul.transaction_service.dto.wallet.WalletResponse;
+import com.rahul.transaction_service.exception.AccountServiceUnavailableException;
+import com.rahul.transaction_service.exception.InsufficientBalanceException;
 import com.rahul.transaction_service.exception.WalletNotFoundException;
+import feign.FeignException;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -14,7 +21,9 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 public class AccountServiceClient {
 
-    private final RestTemplate restTemplate;
+    /// ======================= Using Rest controller where usl value given hardcoded ==================================================
+
+/*    private final RestTemplate restTemplate;
 
     @Value("${account-service.url}")
     private String accountServiceUrl;
@@ -58,4 +67,142 @@ public class AccountServiceClient {
     }
 
     private record AmountPayload(BigDecimal amount) {}
+     Void.class above: RestTemplate's postForObject() is generic and needs
+     SOME Class token for the response type, even when we don't care about
+     the body. Void.class is the convention meaning "deserialize nothing,
+     return null". Feign's `void debit(...)` below handles this natively -
+     no token needed, the method just returns void directly.
+
+*/
+
+    /// ================================== Feign client code : URL value taken from eureka server for service name which was mentioned in accountClient
+  /*  private final AccountClient accountClient;
+
+    public WalletResponse getWallet(Long walletId) {
+        try {
+            return accountClient.getWallet(walletId);
+        } catch (FeignException.NotFound e) {
+            throw new WalletNotFoundException("Wallet not found: " + walletId);
+        }
+    }
+
+    public void debit(Long walletId, BigDecimal amount) {
+        try {
+            accountClient.debit(walletId, new AccountClient.AmountRequest(amount));
+        } catch (FeignException.NotFound e) {
+            throw new WalletNotFoundException("Wallet not found: " + walletId);
+        } catch (FeignException.Conflict e) {
+            throw new InsufficientBalanceException("Insufficient balance in wallet: " + walletId);
+        }
+    }
+
+    public void credit(Long walletId, BigDecimal amount) {
+        try {
+            accountClient.credit(walletId, new AccountClient.AmountRequest(amount));
+        } catch (FeignException.NotFound e) {
+            throw new WalletNotFoundException("Wallet not found: " + walletId);
+        }
+    }
+   */
+
+    /// ================================= Added CircuitBreaker : CircuitBreaker properties are defined in config (github)
+
+    private final AccountClient accountClient;
+
+    // Order matters: @Retry must be OUTER (top), @CircuitBreaker must be
+// INNER (closer to the method). Each retry attempt goes through the
+// circuit breaker individually, and @Retry decides whether to try again.
+// Reversed order = each retry counts as a separate CB failure = opens too fast.
+//
+// In simple terms: @Retry auto-retries a failed call a few times before
+// giving up (like manually clicking "send" again). @CircuitBreaker
+// watches those attempts and stops trying altogether if there are too
+// many failures. One click here now secretly does up to 3 attempts.
+
+    @Bulkhead(name = "accountService")
+    @RateLimiter(name = "accountService")
+    @Retry(name = "accountService")
+    @CircuitBreaker(name = "accountService", fallbackMethod = "getWalletFallback")
+    public WalletResponse getWallet(Long walletId) {
+        try {
+            return accountClient.getWallet(walletId);
+        } catch (FeignException.NotFound e) {
+            throw new WalletNotFoundException("Wallet not found: " + walletId);
+        }
+    }
+
+    private WalletResponse getWalletFallback(Long walletId, Throwable cause) {
+        throw new AccountServiceUnavailableException(
+                "Account Service is currently unavailable for wallet " + walletId, cause);
+    }
+
+
+    @CircuitBreaker(name = "accountService", fallbackMethod = "debitFallback")
+    public void debit(Long walletId, BigDecimal amount) {
+        try {
+            accountClient.debit(walletId, new AccountClient.AmountRequest(amount));
+        } catch (FeignException.NotFound e) {
+            throw new WalletNotFoundException("Wallet not found: " + walletId);
+        } catch (FeignException.Conflict e) {
+            throw new InsufficientBalanceException("Insufficient balance in wallet: " + walletId);
+        }
+    }
+
+    private void debitFallback(Long walletId, BigDecimal amount, Throwable cause) {
+        throw new AccountServiceUnavailableException(
+                "Account Service is currently unavailable — debit failed for wallet " + walletId, cause);
+    }
+
+
+    // KNOWN GAP (documented since Phase 5, not fixed here): if debit() above
+    // succeeds but credit() below fails/opens, the source wallet has already
+    // been debited with no compensating refund and no Transaction record
+    // created. This circuit breaker makes that failure fast and clean
+    // instead of hanging — it does NOT make the transfer atomic. Real fix
+    // is Phase 11's Saga/compensation logic.
+    @CircuitBreaker(name = "accountService", fallbackMethod = "creditFallback")
+    public void credit(Long walletId, BigDecimal amount) {
+        try {
+            accountClient.credit(walletId, new AccountClient.AmountRequest(amount));
+        } catch (FeignException.NotFound e) {
+            throw new WalletNotFoundException("Wallet not found: " + walletId);
+        }
+    }
+
+    private void creditFallback(Long walletId, BigDecimal amount, Throwable cause) {
+        throw new AccountServiceUnavailableException(
+                "Account Service is currently unavailable — credit failed for wallet " + walletId, cause);
+    }
+
+
+    /*  =======
+    ignore-exceptions:
+          - com.rahul.transaction_service.exception.WalletNotFoundException
+          - com.rahul.transaction_service.exception.InsufficientBalanceException
+    *                     credit(walletId, amount) called
+                                |
+                +---------------+---------------+
+                |                               |
+     account-service IS UP              account-service IS DOWN
+                |                               |
+     Returns HTTP 404                No response at all
+     (wallet doesn't exist)          (connection refused / no instances)
+                |                               |
+     FeignException.NotFound          Connection-level exception
+     → caught by YOUR catch block     → NOT caught by your catch block
+                |                               |
+     You throw WalletNotFoundException  Exception passes straight through
+                |                               |
+     @CircuitBreaker checks:            @CircuitBreaker checks:
+     is this in ignore-exceptions?      is this in ignore-exceptions?
+                |                               |
+              YES                              NO
+                |                               |
+     - NOT counted as failure          - COUNTED as failure
+     - fallback NOT triggered          - if enough failures →
+     - exception continues normally      circuit OPENS
+     - client gets normal 404          - fallback triggers →
+                                          AccountServiceUnavailableException
+    * */
+
 }
