@@ -1,0 +1,231 @@
+# ============================================================================
+# OLD CONFIG (commented out) — why this was not good enough:
+# `depends_on` as a plain list (e.g. `depends_on: - config-server`) ONLY waits for the config-server CONTAINER to start. It does NOT check whether the
+# Spring Boot application inside that container has actually finished booting and is listening on its port.
+
+# Fix: use a `healthcheck` (hits /actuator/health) + `depends_on` with `condition: service_healthy`,
+# so dependent services wait until the app inside the container is actually ready, not just until the container  process has started. See the active config below.
+# ============================================================================
+
+# services:
+#   account-db:
+#     image: postgres:18
+#     container_name: account-db
+#     environment:
+#       POSTGRES_USER: root
+#       POSTGRES_PASSWORD: root
+#       POSTGRES_DB: AccountService
+#     ports:
+#       - "5433:5432"
+#     volumes:
+#       - account_db_data:/var/lib/postgresql
+#
+#   transaction-db:
+#     image: postgres:18
+#     container_name: transaction-db
+#     environment:
+#       POSTGRES_USER: root
+#       POSTGRES_PASSWORD: root
+#       POSTGRES_DB: TransactionService
+#     ports:
+#       - "5434:5432"
+#     volumes:
+#       - transaction_db_data:/var/lib/postgresql
+#
+#   config-server:
+#     image: config-server:latest
+#     container_name: config-server
+#     ports:
+#       - "8888:8888"
+#
+#   eureka-server:
+#     image: eureka-server:latest
+#     container_name: eureka-server
+#     depends_on:
+#       - config-server
+#     environment:
+#       - SPRING_PROFILES_ACTIVE=docker
+#       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+#     ports:
+#       - "8761:8761"
+#
+#   account-service:
+#     image: account-service:latest
+#     container_name: account-service
+#     depends_on:
+#       - account-db
+#       - config-server
+#       - eureka-server
+#     environment:
+#       - SPRING_PROFILES_ACTIVE=docker
+#       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+#     ports:
+#       - "8081:8081"
+#
+#   transaction-service:
+#     image: transaction-service:latest
+#     container_name: transaction-service
+#     depends_on:
+#       - transaction-db
+#       - account-service
+#       - config-server
+#       - eureka-server
+#     environment:
+#       - SPRING_PROFILES_ACTIVE=docker
+#       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+#     ports:
+#       - "8082:8082"
+#
+#   api-gateway:
+#     image: api-gateway:latest
+#     container_name: api-gateway
+#     depends_on:
+#       - config-server
+#       - eureka-server
+#       - account-service
+#       - transaction-service
+#     environment:
+#       - SPRING_PROFILES_ACTIVE=docker
+#       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+#     ports:
+#       - "8080:8080"
+#
+# volumes:
+#   account_db_data:
+#   transaction_db_data:
+
+
+# ============================================================================
+# NEW CONFIG (active) — waits for actual app health, not just container start
+# ============================================================================
+
+services:
+  account-db:
+    image: postgres:18
+    container_name: account-db
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: AccountService
+    ports:
+      - "5433:5432"
+    volumes:
+      - account_db_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d AccountService"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  transaction-db:
+    image: postgres:18
+    container_name: transaction-db
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: TransactionService
+    ports:
+      - "5434:5432"
+    volumes:
+      - transaction_db_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d TransactionService"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  config-server:
+    image: config-server:latest
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+
+  eureka-server:
+    image: eureka-server:latest
+    container_name: eureka-server
+    depends_on:
+      config-server:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+
+  account-service:
+    image: account-service:latest
+    container_name: account-service
+    depends_on:
+      account-db:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+
+  transaction-service:
+    image: transaction-service:latest
+    container_name: transaction-service
+    depends_on:
+      transaction-db:
+        condition: service_healthy
+      account-service:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    ports:
+      - "8082:8082"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+
+  api-gateway:
+    image: api-gateway:latest
+    container_name: api-gateway
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      account-service:
+        condition: service_healthy
+      transaction-service:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    ports:
+      - "8080:8080"
+
+volumes:
+  account_db_data:
+  transaction_db_data:
