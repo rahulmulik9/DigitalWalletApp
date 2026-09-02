@@ -1,10 +1,10 @@
-package com.rahul.fraud_service;
+package com.rahul.monitoring_service;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class FraudServiceApplicationTests {
+class MonitoringServiceApplicationTests {
 
 	@Test
 	void contextLoads() {

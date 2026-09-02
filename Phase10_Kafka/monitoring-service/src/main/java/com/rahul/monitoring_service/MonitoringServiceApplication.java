@@ -1,13 +1,13 @@
-package com.rahul.fraud_service;
+package com.rahul.monitoring_service;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class FraudServiceApplication {
+public class MonitoringServiceApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(FraudServiceApplication.class, args);
+		SpringApplication.run(MonitoringServiceApplication.class, args);
 	}
 
 }

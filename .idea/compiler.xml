@@ -7,9 +7,9 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="fraud-service" />
         <module name="config-server" />
         <module name="api-gateway-service" />
+        <module name="monitoring-service" />
         <module name="transaction-service" />
         <module name="account-service" />
         <module name="eureka-server" />
@@ -36,7 +36,7 @@
       <module name="config-server (1)" options="-parameters" />
       <module name="eureka-server" options="-parameters" />
       <module name="eureka-server (1)" options="-parameters" />
-      <module name="fraud-service" options="-parameters" />
+      <module name="monitoring-service" options="-parameters" />
       <module name="notification-service" options="-parameters" />
       <module name="transaction-service" options="-parameters" />
       <module name="transaction-service (1)" options="-parameters" />
