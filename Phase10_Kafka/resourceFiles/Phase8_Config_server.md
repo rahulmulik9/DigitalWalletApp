@@ -1,266 +1,398 @@
-# 🧩 Phase 9 — Feign + Resilience4j Notes
+# 🧩 Phase 10 — Kafka Event-Driven Communication: Full Flow Documentation
 
-> How Transaction Service calls Account Service — before Feign, after Feign, and how Resilience4j protects that call.
+> Built from your actual code — every class name, field, and config value below is what's really running in your project, not a template. Two real bugs hit during this phase are documented as part of the flow, since debugging them taught the underlying mechanics better than clean code would have.
 
 ---
 
-## 1️⃣ Life Before Feign: Plain `RestTemplate`
+## 1️⃣ What Changed in the Architecture
 
-Without Feign, calling Account Service looks like this:
+Before this phase, every service-to-service interaction was synchronous: Transaction Service called Account Service via Feign and waited for a response (Phase 9). Phase 10 adds a second, parallel kind of communication — **asynchronous, fire-and-forget events** — without touching that existing synchronous path at all.
 
-```java
-String url = "http://account-service/api/wallets/" + walletId;
-ResponseEntity<WalletResponse> response =
-        restTemplate.exchange(url, HttpMethod.GET, null, WalletResponse.class);
-WalletResponse wallet = response.getBody();
+```
+                    ┌─────────────────────┐
+  Client ──POST──▶  │  Transaction Service │
+                    └──────────┬───────────┘
+                               │
+                 (unchanged, synchronous, Phase 9)
+                               │
+                               ▼
+                    ┌─────────────────────┐
+                    │   Account Service     │  ← debit/credit via Feign
+                    └─────────────────────┘
+
+                               │
+                 (NEW, asynchronous, Phase 10)
+                               │
+                               ▼
+                    ┌─────────────────────┐
+                    │        Kafka          │  topic: transfer-events
+                    │   (transfer-events)   │
+                    └───┬─────────────┬─────┘
+                        │             │
+                        ▼             ▼
+              ┌──────────────┐  ┌──────────────────┐
+              │ monitoring-   │  │ notification-     │
+              │ service       │  │ service            │
+              └──────────────┘  └──────────────────┘
 ```
 
-**Pain points students should notice:**
-- You manually build the URL as a string — easy to typo, no compile-time safety.
-- You manually pick the HTTP method, manually cast the response type.
-- Error handling (404, 500, timeouts) is all manual `try/catch` around `exchange()`.
-- If the service name changes or the path changes, nothing catches it until runtime.
-
-It works, but it's **boilerplate you write again for every single call, to every single service.**
+Two new services (`monitoring-service`, `notification-service`) were added. Both are **independent Kafka consumers** — they don't know about each other, don't know Transaction Service exists beyond "something publishes to `transfer-events`," and one being down never affects the other or the transfer itself.
 
 ---
 
-## 2️⃣ What Feign Actually Needs
+## 2️⃣ Services Involved and Their Real Role
 
-Feign replaces all of that with a plain Java **interface** — you describe the call, Feign does the rest.
-
-**Ingredients:**
-
-1. **Dependency:**
-   ```xml
-   <dependency>
-       <groupId>org.springframework.cloud</groupId>
-       <artifactId>spring-cloud-starter-openfeign</artifactId>
-   </dependency>
-   ```
-
-2. **Enable it** on the main application class:
-   ```java
-   @EnableFeignClients
-   @SpringBootApplication
-   public class TransactionServiceApplication { ... }
-   ```
-
-3. **Declare the interface** — no implementation needed, Feign generates it at runtime:
-   ```java
-   @FeignClient(name = "account-service")
-   public interface AccountClient {
-
-       @GetMapping("/api/wallets/{walletId}")
-       WalletResponse getWallet(@PathVariable("walletId") Long walletId);
-   }
-   ```
-
-That's it. Call `accountClient.getWallet(id)` like a normal method — Feign turns it into an HTTP call.
-
-**Why this works without a hardcoded URL:** `name = "account-service"` is the name Account Service registered under in Eureka. Feign + Spring Cloud LoadBalancer resolve that name into a real `host:port` at call time — the same discovery mechanism from Phase 6, just used automatically now instead of manually.
-
-**The catch:** Feign *by itself* gives you zero protection. If Account Service is slow or down, your thread just hangs or throws immediately. That's the gap Resilience4j fills.
-
----
-
-## 3️⃣ Why Resilience4j — the Big Picture
-
-Resilience4j isn't one thing — it's **four independent safety mechanisms** you can mix and match, each guarding against a different kind of problem:
-
-| Pattern | Question it answers | Protects against |
+| Service | Kafka role | What it actually does |
 |---|---|---|
-| **Circuit Breaker** | "Has this dependency been failing a lot? Should I even bother calling it?" | Wasting time/threads hammering a service that's clearly down |
-| **Retry** | "Did this one call fail? Should I try again?" | Transient, one-off blips (a dropped packet, a momentary GC pause) |
-| **Rate Limiter** | "Am I calling this dependency too fast?" | Overwhelming a healthy dependency with too much traffic |
-| **Bulkhead** | "How many calls to this dependency am I allowed to have in-flight at once?" | One slow dependency eating all your threads and starving unrelated requests |
+| `transaction-service` | **Producer** | Publishes `INITIATED` and `COMPLETED` events after a transfer |
+| `monitoring-service` | **Consumer** | Reads events, applies amount/velocity rules, saves flags to its own DB |
+| `notification-service` | **Consumer** | Reads events, logs a simulated SMS/email |
+| `account-service`, `config-server`, `eureka-server`, `api-gateway-service` | **None** | Untouched — no Kafka dependency, no producer or consumer role |
 
-Think of a ship: **bulkheads** are physical compartments so one flooded section doesn't sink the whole ship. Software bulkheads do the same thing for threads/calls.
+Consumer groups (from your actual config):
+- `monitoring-service-group` (or `monitor-service-group` — **check this exact string matches** between your `-local.yml` and your `@KafkaListener` annotation; a typo here silently creates a second, orphaned consumer group rather than erroring)
+- `notification-service-group`
 
-None of these fix the underlying problem (Account Service being slow) — they all exist to stop that problem from **spreading** and taking Transaction Service down with it.
+**Why different group IDs matter, concretely:** if both services shared one group ID, Kafka would split the 2 messages between them — each service would only see roughly half the events. Separate group IDs is what makes both services get their *own full copy* of everything published.
 
 ---
 
-## 4️⃣ Circuit Breaker — Line by Line
+## 3️⃣ Full Request Lifecycle — Traced Through Your Real Code
 
-```yaml
-resilience4j:
-  circuitbreaker:
-    instances:
-      accountService:
-        register-health-indicator: true
-        sliding-window-size: 10
-        minimum-number-of-calls: 5
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 10s
-        permitted-number-of-calls-in-half-open-state: 3
-        ignore-exceptions:
-          - com.rahul.transaction_service.exception.WalletNotFoundException
-          - com.rahul.transaction_service.exception.InsufficientBalanceException
+### Step 1 — Client sends the request
+
+```
+POST /api/transfers
+{ "fromWalletId": 1, "toWalletId": 2, "amount": 10.00 }
 ```
 
-**The 3 states (like an electrical circuit breaker in your house):**
-- **CLOSED** — normal. Calls go through as usual.
-- **OPEN** — tripped. Calls **fail immediately** without even trying — no network call happens at all.
-- **HALF_OPEN** — cautiously testing. Lets a few real calls through to check "has it recovered?"
-
-**Every property, explained:**
-
-| Property | Meaning |
-|---|---|
-| `register-health-indicator: true` | This circuit breaker's current state shows up on `/actuator/health` — useful for monitoring/debugging. |
-| `sliding-window-size: 10` | Judges health based on the **last 10 calls only**, not all-time history. |
-| `minimum-number-of-calls: 5` | Won't even calculate a failure rate until at least 5 calls have happened — avoids overreacting to "1 out of 1 failed." |
-| `failure-rate-threshold: 50` | If **≥50%** of the calls in the window failed, trip to OPEN. |
-| `wait-duration-in-open-state: 10s` | Once OPEN, stay OPEN for 10 seconds before even trying HALF_OPEN — gives the failing service time to recover. |
-| `permitted-number-of-calls-in-half-open-state: 3` | In HALF_OPEN, allow exactly 3 trial calls. If they mostly succeed → back to CLOSED. If they mostly fail → back to OPEN. |
-| `ignore-exceptions` | These exceptions **don't count as failures** for the circuit breaker at all — as if the call never happened for health-tracking purposes. |
-
-**Why `WalletNotFoundException` and `InsufficientBalanceException` are ignored here — this is the key teaching point:**
-A circuit breaker should trip on **infrastructure problems** (timeouts, connection refused, 500s) — signs Account Service itself is unhealthy. `WalletNotFoundException` and `InsufficientBalanceException` are **normal business outcomes** — Account Service is working perfectly fine, it's just telling you "that wallet doesn't exist" or "not enough balance." If you didn't ignore these, a burst of legitimate "insufficient balance" errors from real users could accidentally trip the circuit breaker and start rejecting *everyone's* requests — even people with plenty of balance. Don't let business logic errors masquerade as infrastructure failures.
-
----
-
-## 5️⃣ Retry — Line by Line
-
-```yaml
-  retry:
-    instances:
-      accountService:
-        max-attempts: 3
-        wait-duration: 500ms
-        enable-exponential-backoff: true
-        exponential-backoff-multiplier: 2
-        ignore-exceptions:
-          - com.rahul.transaction_service.exception.WalletNotFoundException
-          - com.rahul.transaction_service.exception.InsufficientBalanceException
-```
-
-| Property | Meaning |
-|---|---|
-| `max-attempts: 3` | Total attempts **including the first call** — so up to 2 retries after the initial failure. |
-| `wait-duration: 500ms` | Base wait time between attempts. |
-| `enable-exponential-backoff: true` | Instead of waiting a flat 500ms every time, the wait **grows** between attempts. |
-| `exponential-backoff-multiplier: 2` | Attempt 1 fails → wait ~500ms → Attempt 2 fails → wait ~500ms × 2 = ~1000ms → Attempt 3. |
-| `ignore-exceptions` | Same two business exceptions — **don't retry these at all**, fail immediately instead. |
-
-**Why exponential backoff instead of flat retries:** if Account Service is briefly overloaded, hammering it with retries every 500ms flat makes the overload *worse*. Growing the wait gives it breathing room to recover.
-
-**Why ignore the same exceptions here too:** retrying "insufficient balance" three times is pointless — the balance won't change between attempt 1 and attempt 3 just because you waited 500ms. Retry only makes sense for **transient** failures, not deterministic business outcomes.
-
-**🚨 The most important rule in this whole file:** `@Retry` is only ever applied to `getWallet()` (a read) — **never** to `debit()` or `credit()` (a write), and this is intentional, not an oversight. If a debit call times out *after* Account Service already processed it, but *before* the response reaches Transaction Service, a blind retry would debit the wallet **twice**. Retrying writes safely requires an idempotency key so the retried call can be recognized and ignored server-side — that's Phase 11's job, not Phase 9's.
-
----
-
-## 6️⃣ Rate Limiter — Line by Line
-
-```yaml
-  ratelimiter:
-    instances:
-      accountService:
-        limit-for-period: 10
-        limit-refresh-period: 1s
-        timeout-duration: 500ms
-```
-
-| Property | Meaning |
-|---|---|
-| `limit-for-period: 10` | Max 10 calls allowed per period. |
-| `limit-refresh-period: 1s` | The period is 1 second — so effectively "max 10 calls/sec to Account Service." |
-| `timeout-duration: 500ms` | If the limit is already used up, an incoming (e.g. 11th) call **waits up to 500ms** for the next window to open. If it still can't get a slot, it fails fast instead of hanging. |
-
-**Circuit Breaker vs Rate Limiter — the difference students often mix up:**
-- Circuit Breaker is **reactive** — it responds to Account Service *already failing*.
-- Rate Limiter is **proactive** — it caps outgoing traffic regardless of whether Account Service is healthy or not. It protects Account Service **from Transaction Service itself** sending too much traffic, not the other way around.
-
----
-
-## 7️⃣ Bulkhead — Line by Line
-
-```yaml
-  bulkhead:
-     instances:
-       accountService:
-         max-concurrent-calls: 5
-         max-wait-duration: 500ms
-```
-
-| Property | Meaning |
-|---|---|
-| `max-concurrent-calls: 5` | At most 5 calls to Account Service can be **in-flight at the same time**. |
-| `max-wait-duration: 500ms` | A 6th call waits up to 500ms for one of those 5 slots to free up, then fails fast if none does. |
-
-**Why this matters even with a Circuit Breaker in place:** the Circuit Breaker only trips after enough calls have already failed. Before it trips, if Account Service is *slow* (not down), every incoming request could pile up waiting on a slow response — potentially exhausting all of Transaction Service's own threads. Bulkhead caps how many requests are allowed to be "stuck waiting" on Account Service at once, protecting Transaction Service's own capacity to serve *other* unrelated requests.
-
-> There's also a **ThreadPoolBulkhead** variant (a separate dedicated thread pool per dependency) vs the **SemaphoreBulkhead** shown here (just a counting limit on the calling thread). Semaphore is simpler and is what's configured above — worth knowing ThreadPoolBulkhead exists if you go deeper later, but not needed now.
-
----
-
-## 8️⃣ The Annotations, Mapped to Config
+Hits `TransferController.transfer()`:
 
 ```java
-@Bulkhead(name = "accountService")
-@RateLimiter(name = "accountService")
-@Retry(name = "accountService")
-@CircuitBreaker(name = "accountService", fallbackMethod = "getWalletFallback")
-public WalletResponse getWallet(Long walletId) {
-    return accountClient.getWallet(walletId);
-}
-
-public WalletResponse getWalletFallback(Long walletId, Throwable t) {
-    throw new AccountServiceUnavailableException("Account service unavailable, try again later");
+@PostMapping("/transfers")
+public ResponseEntity<TransactionResponse> transfer(@Valid @RequestBody TransferRequest request) {
+    Long callerUserId = securityUtils.getCurrentUserId();
+    Transaction txn = transferService.transfer(request, callerUserId);
+    return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(txn));
 }
 ```
 
-- **`name = "accountService"` must match the `instances:` key** in the YAML (`resilience4j.circuitbreaker.instances.accountService`, etc). This is the wiring — the annotation and the config block are connected purely by this string matching.
-- **`fallbackMethod`** — only `@CircuitBreaker` defines one here. Its signature must match the original method's parameters **plus a trailing `Throwable`**. It's called when the circuit is OPEN, or when any exception not in `ignore-exceptions` propagates all the way out.
+`@Valid` triggers the Bean Validation annotations on `TransferRequest` (`@NotNull`, `@PositiveAmount`) before this method body even runs — invalid input never reaches `TransferService` at all (Phase 4's exception handling still applies here, unchanged).
 
-### ⚠️ Correcting a common misconception: annotation order ≠ execution order
+`securityUtils.getCurrentUserId()` pulls the caller's identity from the JWT (Phase 2) — this is what makes the ownership check in the next step possible.
 
-It's natural to assume the order you *stack* these annotations top-to-bottom controls the order they run in (like wrapping decorators). **That's not how Resilience4j's Spring integration works** — the actual execution order is fixed internally by the library (each aspect has its own priority), **regardless of how you arrange the annotations in your code.**
+### Step 2 — `TransferService.transfer()` runs, inside `@Transactional`
 
-Resilience4j's documented default order, outermost to innermost, is:
-
-```
-Retry → CircuitBreaker → RateLimiter → Bulkhead → (the actual call)
+```java
+@Transactional
+public Transaction transfer(TransferRequest request, Long callerUserId) {
 ```
 
-**Why this specific order is deliberately chosen, not arbitrary:** Retry sits on the *outside* so that when it retries, **each individual attempt passes back through the Circuit Breaker** and gets recorded in its sliding window as a separate call. If it were the other way around (Circuit Breaker outside Retry), the Circuit Breaker would only ever see "one call" per request — no matter how many times Retry silently tried underneath — and it would never get an accurate picture of the real failure rate.
+**a) Guard clause — no self-transfers:**
+```java
+if (request.getFromWalletId().equals(request.getToWalletId())) {
+    throw new IllegalArgumentException("Cannot transfer to the same wallet");
+}
+```
 
-**Practical takeaway for students:** don't try to control execution order by rearranging `@Bulkhead`/`@RateLimiter`/`@Retry`/`@CircuitBreaker` in your source — it won't do anything. If you ever genuinely need to change the order, Resilience4j exposes explicit properties for that (e.g. `resilience4j.retry.retryAspectOrder`), but the default order above is correct for almost every real use case, including this one.
+**b) Fetch the source wallet via Feign (Phase 9's `AccountServiceClient`):**
+```java
+WalletResponse fromWallet = accountServiceClient.getWallet(request.getFromWalletId());
+```
+
+**c) Ownership check — prevents IDOR (Phase 2's lesson, still enforced here):**
+```java
+if (!fromWallet.getUserId().equals(callerUserId)) {
+    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied: source wallet does not belong to you");
+}
+```
+
+**d) Fetch destination wallet, then perform the actual money movement — still via Feign, still synchronous, still protected by Resilience4j from Phase 9:**
+```java
+WalletResponse toWallet = accountServiceClient.getWallet(request.getToWalletId());
+accountServiceClient.debit(fromWallet.getId(), request.getAmount());
+accountServiceClient.credit(toWallet.getId(), request.getAmount());
+```
+
+At this point, **the money has already moved.** Everything from here on is about recording what happened and telling the rest of the system — none of it can undo the transfer if it fails (that gap is explicitly Phase 11's problem, not this phase's).
+
+**e) Build the `Transaction` object — not saved yet, so it has no `id`:**
+```java
+Transaction txn = Transaction.builder()
+        .fromWalletId(fromWallet.getId())
+        .toWalletId(toWallet.getId())
+        .amount(request.getAmount())
+        .type(TransactionType.TRANSFER)
+        .status(TransactionStatus.PENDING)
+        .build();
+```
+
+### Step 3 — First Kafka publish: `INITIATED`
+
+```java
+transferEventProducer.publish(TransferEvent.builder()
+        .eventType("INITIATED")
+        .fromWalletId(request.getFromWalletId())
+        .toWalletId(request.getToWalletId())
+        .amount(request.getAmount())
+        .timestamp(Instant.now())
+        .build());
+```
+
+**Why `transactionId` is correctly `null` here:** the `Transaction` row doesn't exist in the database yet — `@GeneratedValue(strategy = GenerationType.IDENTITY)` on the `Transaction` entity means the ID is only assigned by Postgres at `INSERT` time, which hasn't happened yet. This is expected, not a bug.
+
+### Step 4 — Ledger entries built, transaction marked SUCCESS, then **saved**
+
+```java
+LedgerEntry debit = LedgerEntry.builder()
+        .walletId(fromWallet.getId()).transaction(txn).amount(request.getAmount())
+        .type(LedgerEntryType.DEBIT).description("Transfer to wallet " + toWallet.getId()).build();
+LedgerEntry credit = LedgerEntry.builder()
+        .walletId(toWallet.getId()).transaction(txn).amount(request.getAmount())
+        .type(LedgerEntryType.CREDIT).description("Transfer from wallet " + fromWallet.getId()).build();
+txn.addLedgerEntry(debit);
+txn.addLedgerEntry(credit);
+txn.setStatus(TransactionStatus.SUCCESS);
+
+Transaction savedTxn = transactionRepository.save(txn);
+```
+
+**This save must happen before the second publish** — this is the fix for a real bug hit during this phase (documented in Section 6). `savedTxn.getId()` is now populated, because `save()` is exactly the operation that triggers the `INSERT` and gets the generated ID back from Hibernate.
+
+### Step 5 — Second Kafka publish: `COMPLETED`
+
+```java
+transferEventProducer.publish(TransferEvent.builder()
+        .eventType("COMPLETED")
+        .transactionId(savedTxn.getId())
+        .fromWalletId(request.getFromWalletId())
+        .toWalletId(request.getToWalletId())
+        .amount(request.getAmount())
+        .timestamp(Instant.now())
+        .build());
+
+return savedTxn;
+```
+
+### Step 6 — Inside `TransferEventProducer.publish()`
+
+```java
+public void publish(TransferEvent event) {
+    String key = String.valueOf(event.getFromWalletId());
+
+    kafkaTemplate.send(TOPIC, key, event)
+            .whenComplete((result, ex) -> {
+                if (ex != null) {
+                    log.error("Failed to publish {} event for transactionId={}", ...);
+                } else {
+                    log.info("Published {} event for transactionId={} to partition={}", ...);
+                }
+            });
+}
+```
+
+**Why keyed by `fromWalletId`:** Kafka guarantees ordering only *within* a partition, and the partition a message lands in is determined by its key. By keying on `fromWalletId`, every event for the same wallet — across both INITIATED and COMPLETED, across every transfer that wallet ever makes — always lands in the same partition, in the order they were sent. This is exactly what your logs showed: both events landed in `partition=0` for wallet `1`.
+
+`kafkaTemplate.send()` is **asynchronous** — it returns a `CompletableFuture` immediately, and `TransferService.transfer()` does **not** wait for Kafka to confirm delivery before returning to the client. This is intentional: the client gets their "transfer successful" response the moment the DB save completes, without waiting on Kafka at all. `.whenComplete()` just logs success/failure in the background, after the response has likely already gone out.
+
+### Step 7 — Message lands in the `transfer-events` topic
+
+At this point, the message exists as JSON bytes inside a Kafka partition on your broker (`localhost:9092`), tagged with the key (`"1"`) and, because `JsonSerializer` was used, a `__TypeId__` header containing `com.rahul.transaction_service.event.TransferEvent` — the producer's own class name. (This exact header is what caused Bug #1, in Section 6.)
+
+### Step 8 — Monitoring Service consumes it independently
+
+```java
+@KafkaListener(topics = "transfer-events", groupId = "monitoring-service-group")
+public void onTransferEvent(TransferEvent event) {
+    log.info("Received {} event for transactionId={}", event.getEventType(), event.getTransactionId());
+    if ("COMPLETED".equals(event.getEventType())) {
+        ruleEngine.evaluate(event);
+    }
+}
+```
+
+Note this deliberately **ignores `INITIATED` events** — there's nothing useful to check about a transfer that hasn't actually completed yet. Only `COMPLETED` triggers rule evaluation.
+
+Inside `RuleEngine.evaluate()`:
+```java
+public void evaluate(TransferEvent event) {
+    checkAmountThreshold(event);
+    checkVelocity(event);
+}
+```
+- `checkAmountThreshold` — flags if `amount > ₹1,00,000`
+- `checkVelocity` — tracks recent transfer timestamps per wallet **in memory**, flags if more than 3 transfers happened from the same wallet in the last 60 seconds
+
+Any flag gets saved via `MonitoringFlagRepository.save(...)` into Monitoring Service's **own** database (`MonitoringService` on port 5435) — completely separate from `TransactionService`'s or `AccountService`'s databases, following the database-per-service pattern from Phase 5.
+
+### Step 9 — Notification Service consumes it independently, in parallel
+
+```java
+@KafkaListener(topics = "transfer-events", groupId = "notification-service-group")
+public void onTransferEvent(TransferEvent event) {
+    if ("COMPLETED".equals(event.getEventType())) {
+        notificationSimulator.notify(event);
+    }
+}
+```
+
+```java
+public void notify(TransferEvent event) {
+    log.info("📩 SMS SENT: ₹{} debited from wallet {} — transactionId={}", ...);
+}
+```
+
+No database — just a log line, as agreed. This consumer runs completely independently of Monitoring Service; Kafka delivers a separate copy of the same message to each group.
 
 ---
 
-## 9️⃣ Putting It All Together — What Happens on One Call
+## 4️⃣ Full Sequence Diagram
 
-Tracing a single `getWallet()` call through the default order (`Retry → CircuitBreaker → RateLimiter → Bulkhead → actual call`):
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant TC as TransferController
+    participant TS as TransferService
+    participant AS as Account Service (Feign)
+    participant DB as transaction_db
+    participant TEP as TransferEventProducer
+    participant K as Kafka (transfer-events)
+    participant MS as Monitoring Service
+    participant NS as Notification Service
 
-```
-1. Retry wrapper receives the call.
-2. Attempt #1:
-   a. CircuitBreaker check: is the circuit OPEN? If yes → fail immediately, skip to fallback.
-   b. RateLimiter check: is there room in this second's quota? If not → wait up to 500ms, then fail fast if still none.
-   c. Bulkhead check: is there a free concurrent-call slot (max 5)? If not → wait up to 500ms, then fail fast if still none.
-   d. Actual Feign call goes out → Eureka resolves account-service → real HTTP request.
-3. If attempt #1 fails with a retryable exception (not WalletNotFoundException/InsufficientBalanceException):
-   → wait ~500ms → Attempt #2 (repeats steps a-d, including a *fresh* CircuitBreaker/RateLimiter/Bulkhead check)
-   → if that fails too → wait ~1000ms → Attempt #3
-4. If all attempts are exhausted, or a non-retryable exception is thrown at any point:
-   → CircuitBreaker's fallbackMethod (getWalletFallback) runs, throwing AccountServiceUnavailableException.
-5. GlobalExceptionHandler catches that and returns a clean 503 to the client — not a raw stack trace.
+    C->>TC: POST /api/transfers
+    TC->>TS: transfer(request, callerUserId)
+    TS->>AS: getWallet(fromWalletId)
+    TS->>TS: ownership check (JWT userId == wallet owner)
+    TS->>AS: getWallet(toWalletId)
+    TS->>AS: debit(fromWalletId, amount)
+    TS->>AS: credit(toWalletId, amount)
+    Note over TS: Money has now moved — everything below is recording + notifying
+    TS->>TEP: publish(INITIATED, transactionId=null)
+    TEP->>K: send(key=fromWalletId, event)
+    TS->>DB: transactionRepository.save(txn)
+    DB-->>TS: savedTxn (id populated)
+    TS->>TEP: publish(COMPLETED, transactionId=savedTxn.id)
+    TEP->>K: send(key=fromWalletId, event)
+    TS-->>TC: savedTxn
+    TC-->>C: 201 Created
+
+    par Independent consumption
+        K->>MS: COMPLETED event (group: monitoring-service-group)
+        MS->>MS: RuleEngine.evaluate() — amount + velocity checks
+        MS->>MS: save MonitoringFlag if triggered (own DB)
+    and
+        K->>NS: COMPLETED event (group: notification-service-group)
+        NS->>NS: log "SMS SENT"
+    end
 ```
 
 ---
 
-## 🔟 Quick Recap Cheat-Sheet
+## 5️⃣ Config That Makes This Work
 
-- [ ] Feign replaces manual `RestTemplate` boilerplate with a declarative interface — `name` in `@FeignClient` must match the target's registered Eureka name
-- [ ] Feign alone = zero protection. Resilience4j adds four independent, combinable safety nets
-- [ ] **Circuit Breaker** — stops calling a service that's clearly failing (judged over a sliding window, not all-time)
-- [ ] **Retry** — re-attempts a failed call, with growing wait times (exponential backoff)
-- [ ] **Rate Limiter** — proactively caps outgoing call rate, regardless of success/failure
-- [ ] **Bulkhead** — caps concurrent in-flight calls, so a slow dependency can't starve unrelated requests
-- [ ] `ignore-exceptions` on both CircuitBreaker and Retry = "this is a normal business outcome, not an infrastructure failure — don't count it, don't retry it"
-- [ ] Never apply `@Retry` to a mutating call (debit/credit) without idempotency in place first
-- [ ] Annotation stacking order in your Java code is cosmetic — actual execution order is fixed by Resilience4j: `Retry → CircuitBreaker → RateLimiter → Bulkhead`
-- [ ] Only one fallback method is usually needed — on `@CircuitBreaker` — as the final catch-all after everything else has been tried
+### Transaction Service (producer)
+```yaml
+spring:
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+```
+
+### Monitoring Service (consumer) — final, working version
+```yaml
+spring:
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: monitoring-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: com.rahul.monitoring_service.event.TransferEvent
+        spring.json.trusted.packages: "com.rahul.monitoring_service.event"
+```
+
+### Notification Service (consumer) — final, working version
+```yaml
+spring:
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: notification-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: com.rahul.notification_service.event.TransferEvent
+        spring.json.trusted.packages: "com.rahul.notification_service.event"
+```
+
+**`auto-offset-reset: earliest`** — if a consumer group has never read from this topic before (brand new group, or the topic existed before the consumer did), start from the very first message rather than only new ones. Useful while developing/testing, since you don't lose messages published before a consumer happened to be running.
+
+---
+
+## 6️⃣ Two Real Bugs Hit in This Phase — and Why They Happened
+
+These aren't hypothetical "gotchas" — both actually broke your running services during this build, and understanding *why* is more valuable than the fix itself.
+
+### Bug 1 — `ClassNotFoundException` on the consumer side
+
+**Symptom:**
+```
+Caused by: java.lang.ClassNotFoundException: com.rahul.transaction_service.event.TransferEvent
+```
+appearing inside **Monitoring Service's** logs.
+
+**Root cause:** `JsonSerializer` (producer side) automatically stamps a `__TypeId__` header on every message containing the exact class name of the object being sent — in this case, Transaction Service's own `TransferEvent`, at `com.rahul.transaction_service.event.TransferEvent`. By default, `JsonDeserializer` (consumer side) trusts that header and tries to load a class with that *exact* name. But Monitoring Service doesn't have that class — it has its own separate copy at `com.rahul.monitoring_service.event.TransferEvent`. Same fields, different package, different class as far as Java's classloader is concerned.
+
+This is the direct cost of the architectural decision to **duplicate the event class per service** rather than share one class via a common library — a normal, common microservices trade-off, but one that requires this specific fix.
+
+**Fix:** tell each consumer to stop trusting the producer's class name entirely, and always deserialize into its *own* local class:
+```yaml
+spring.json.use.type.headers: false
+spring.json.value.default.type: com.rahul.monitoring_service.event.TransferEvent
+```
+
+**The follow-up mistake (worth naming honestly):** the first attempt at this fix was applied to *both* services but with the **same** package name (`monitoring_service`) copy-pasted into Notification Service's file by mistake — causing the identical error to reappear, just in the other service. The rule that prevents this: each service's `spring.json.value.default.type` must always reference a class inside *that same service's own codebase*, never another service's package.
+
+### Bug 2 — `transactionId=null` on the COMPLETED event
+
+**Symptom:** both Monitoring and Notification Service logged `transactionId=null` for the COMPLETED event — even though `INITIATED` correctly showing `null` was expected.
+
+**Root cause — ordering bug in `TransferService.transfer()`:** the original code built and published the COMPLETED event using `txn.getId()`, **before** calling `transactionRepository.save(txn)`. Since `@GeneratedValue(strategy = GenerationType.IDENTITY)` only assigns an ID at the moment of the actual database `INSERT`, `txn.getId()` was still `null` at the point the event was built — the save simply hadn't happened yet.
+
+**Fix:** reorder so `save()` happens first, capture the returned entity (which *does* have the generated ID), and publish COMPLETED using that:
+```java
+Transaction savedTxn = transactionRepository.save(txn);   // id generated here
+
+transferEventProducer.publish(TransferEvent.builder()
+        .transactionId(savedTxn.getId())                  // now correct
+        ...
+```
+
+**The general lesson, worth remembering beyond this one bug:** with `IDENTITY`-strategy generated IDs, an entity's ID is only trustworthy *after* `save()` returns — never before, no matter how confident the code looks. Any logic that needs the ID (publishing an event, returning it in a response, logging it) must happen after the save, using the save's return value — not the original object reference.
+
+---
+
+## 7️⃣ What's Genuinely Done vs. Still Missing
+
+Being explicit here so this doc doesn't overstate progress — per the original Phase 10 deliverables:
+
+| Deliverable | Status |
+|---|---|
+| Every transfer emits INITIATED + COMPLETED events | ✅ Working, confirmed via logs |
+| Monitoring Service independently consumes and can flag | ✅ Rule engine + DB persistence in place |
+| Notification Service independently consumes and logs | ✅ Working |
+| Correct `transactionId` on COMPLETED events | ✅ Fixed (Section 6, Bug 2) |
+| Consumer deserialization working correctly | ✅ Fixed (Section 6, Bug 1) |
+| **Idempotent consumers** (same event twice ⇒ no double-flag/double-notify) | ⬜ **Not built yet** |
+| **Dead Letter Topic** for poison-pill messages | ⬜ **Not built yet** |
+| Containerized (Docker) version tested | ⬜ **Not done yet** — still running all services locally from IntelliJ, Postgres in Docker, Kafka native |
+
+The two ⬜ Kafka-specific items (idempotency, DLT) are the next concrete steps — both build directly on everything documented above, since they modify the `@KafkaListener` methods and consumer config you now understand in detail.

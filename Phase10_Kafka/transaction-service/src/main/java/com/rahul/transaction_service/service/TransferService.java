@@ -111,7 +111,6 @@ public class TransferService {
                 .status(TransactionStatus.PENDING)
                 .build();
 
-        // NEW: publish "INITIATED" before attempting debit/credit
         transferEventProducer.publish(TransferEvent.builder()
                 .eventType("INITIATED")
                 .fromWalletId(request.getFromWalletId())
@@ -130,17 +129,18 @@ public class TransferService {
         txn.addLedgerEntry(credit);
         txn.setStatus(TransactionStatus.SUCCESS);
 
-        // NEW: publish "COMPLETED" after everything succeeds
+        Transaction savedTxn = transactionRepository.save(txn);   // ⬅ MOVED UP — id is generated here now
+
         transferEventProducer.publish(TransferEvent.builder()
                 .eventType("COMPLETED")
-                .transactionId(txn.getId())
+                .transactionId(savedTxn.getId())                  // ⬅ now a real, non-null id
                 .fromWalletId(request.getFromWalletId())
                 .toWalletId(request.getToWalletId())
                 .amount(request.getAmount())
                 .timestamp(Instant.now())
                 .build());
 
-        return transactionRepository.save(txn);
+        return savedTxn;
     }
 }
 
