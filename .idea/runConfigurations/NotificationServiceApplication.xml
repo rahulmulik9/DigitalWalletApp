@@ -5,6 +5,7 @@
     </envs>
     <option name="MAIN_CLASS_NAME" value="com.rahul.notification_service.NotificationServiceApplication" />
     <module name="notification-service" />
+    <option name="VM_PARAMETERS" value="-Duser.timezone=Asia/Kolkata" />
     <extension name="coverage">
       <pattern>
         <option name="PATTERN" value="com.rahul.notification_service.*" />

@@ -16,8 +16,13 @@ public class TransferEventListener {
 
     @KafkaListener(topics = "transfer-events", groupId = "notification-service-group")
     public void onTransferEvent(TransferEvent event) {
-        if ("COMPLETED".equals(event.getEventType())) {
-            notificationSimulator.notify(event);
+        // Same guard as Monitoring Service — INITIATED events always have
+        // transactionId=null, which violates ProcessedEvent's not-null
+        // constraint inside NotificationSimulator.notify() if allowed through.
+        if (!"COMPLETED".equals(event.getEventType())) {
+            return;
         }
+
+        notificationSimulator.notify(event);
     }
 }
