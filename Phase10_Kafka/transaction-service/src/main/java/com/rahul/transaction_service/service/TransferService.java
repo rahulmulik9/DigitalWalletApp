@@ -4,6 +4,8 @@ import com.rahul.transaction_service.client.AccountServiceClient;
 import com.rahul.transaction_service.dto.transfer.TransferRequest;
 import com.rahul.transaction_service.dto.wallet.WalletResponse;
 import com.rahul.transaction_service.entity.*;
+import com.rahul.transaction_service.event.TransferEvent;
+import com.rahul.transaction_service.producer.TransferEventProducer;
 import com.rahul.transaction_service.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -11,13 +13,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
+
 @Service
 @RequiredArgsConstructor
 public class TransferService {
 
     private final TransactionRepository transactionRepository;
     private final AccountServiceClient accountServiceClient;
-
+    private final TransferEventProducer transferEventProducer; // NEW
     /**
      * Moves money between two wallets. Both legs succeed or both roll back —
      * Transactional is what guarantees that here.
@@ -107,6 +111,15 @@ public class TransferService {
                 .status(TransactionStatus.PENDING)
                 .build();
 
+        // NEW: publish "INITIATED" before attempting debit/credit
+        transferEventProducer.publish(TransferEvent.builder()
+                .eventType("INITIATED")
+                .fromWalletId(request.getFromWalletId())
+                .toWalletId(request.getToWalletId())
+                .amount(request.getAmount())
+                .timestamp(Instant.now())
+                .build());
+
         LedgerEntry debit = LedgerEntry.builder()
                 .walletId(fromWallet.getId()).transaction(txn).amount(request.getAmount())
                 .type(LedgerEntryType.DEBIT).description("Transfer to wallet " + toWallet.getId()).build();
@@ -116,6 +129,16 @@ public class TransferService {
         txn.addLedgerEntry(debit);
         txn.addLedgerEntry(credit);
         txn.setStatus(TransactionStatus.SUCCESS);
+
+        // NEW: publish "COMPLETED" after everything succeeds
+        transferEventProducer.publish(TransferEvent.builder()
+                .eventType("COMPLETED")
+                .transactionId(txn.getId())
+                .fromWalletId(request.getFromWalletId())
+                .toWalletId(request.getToWalletId())
+                .amount(request.getAmount())
+                .timestamp(Instant.now())
+                .build());
 
         return transactionRepository.save(txn);
     }
