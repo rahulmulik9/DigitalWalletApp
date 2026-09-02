@@ -9,7 +9,6 @@
         <outputRelativeToContentRoot value="true" />
         <module name="config-server" />
         <module name="api-gateway-service" />
-        <module name="monitoring-service" />
         <module name="transaction-service" />
         <module name="account-service" />
         <module name="eureka-server" />
@@ -22,6 +21,7 @@
       <module name="config-server (1)" target="17" />
       <module name="DigitalWallet" target="17" />
       <module name="eureka-server (1)" target="17" />
+      <module name="monitoring-service" target="17" />
       <module name="transaction-service (1)" target="17" />
     </bytecodeTargetLevel>
   </component>
