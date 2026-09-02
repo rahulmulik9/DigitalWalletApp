@@ -12,6 +12,7 @@
         <option value="$PROJECT_DIR$/Phase10_Kafka/fraud-service/pom.xml" />
         <option value="$PROJECT_DIR$/Phase10_Kafka/notification-service/pom.xml" />
         <option value="$PROJECT_DIR$/Phase10_Kafka/transaction-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase10_Kafka/monitoring-service/pom.xml" />
       </list>
     </option>
   </component>
