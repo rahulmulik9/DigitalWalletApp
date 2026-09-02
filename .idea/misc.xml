@@ -5,11 +5,14 @@
     <option name="originalFiles">
       <list>
         <option value="$PROJECT_DIR$/DigitalWallet/pom.xml" />
-        <option value="$PROJECT_DIR$/Phase8_Config_server/account-service/pom.xml" />
-        <option value="$PROJECT_DIR$/Phase8_Config_server/api-gateway-service/pom.xml" />
-        <option value="$PROJECT_DIR$/Phase8_Config_server/config-server/pom.xml" />
-        <option value="$PROJECT_DIR$/Phase8_Config_server/eureka-server/pom.xml" />
-        <option value="$PROJECT_DIR$/Phase8_Config_server/transaction-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase10_Kafka/account-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase10_Kafka/api-gateway-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase10_Kafka/config-server/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase10_Kafka/eureka-server/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase10_Kafka/fraud-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase10_Kafka/notification-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase10_Kafka/transaction-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase10_Kafka/monitoring-service/pom.xml" />
       </list>
     </option>
   </component>
