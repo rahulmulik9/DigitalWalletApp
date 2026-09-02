@@ -7,8 +7,9 @@ import com.rahul.monitoring_service.service.RuleEngine;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.stereotype.Component;
-
+import org.springframework.kafka.annotation.BackOff;
 import java.time.Instant;
 
 @Slf4j
@@ -19,6 +20,14 @@ public class TransferEventListener {
     private final RuleEngine ruleEngine;
     private final ProcessedEventRepository processedEventRepository;
 
+    @RetryableTopic(
+            attempts = "3",
+            backOff = @BackOff(
+                    delay = 1000,
+                    multiplier = 2.0
+            ),
+            dltTopicSuffix = "-dlt"
+    )
     @KafkaListener(topics = "transfer-events", groupId = "monitoring-service-group")
     public void onTransferEvent(TransferEvent event) {
         log.info("Received {} event for transactionId={}", event.getEventType(), event.getTransactionId());

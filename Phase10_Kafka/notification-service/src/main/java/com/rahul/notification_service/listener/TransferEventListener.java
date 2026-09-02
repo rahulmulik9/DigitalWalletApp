@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+import org.springframework.kafka.annotation.BackOff;
+import org.springframework.kafka.annotation.RetryableTopic;
 
 @Slf4j
 @Component
@@ -14,6 +16,14 @@ public class TransferEventListener {
 
     private final NotificationSimulator notificationSimulator;
 
+    @RetryableTopic(
+            attempts = "3",
+            backOff = @BackOff(
+                    delay = 1000,
+                    multiplier = 2.0
+            ),
+            dltTopicSuffix = "-dlt"
+    )
     @KafkaListener(topics = "transfer-events", groupId = "notification-service-group")
     public void onTransferEvent(TransferEvent event) {
         // Same guard as Monitoring Service — INITIATED events always have
