@@ -3,6 +3,13 @@
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/DigitalWallet/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase1-4_Monolithic/DigitalWallet/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase10_Kafka/account-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase10_Kafka/api-gateway-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase10_Kafka/config-server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase10_Kafka/eureka-server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase10_Kafka/fraud-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase10_Kafka/notification-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase10_Kafka/transaction-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase5_SimpleMultipleService/account-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase5_SimpleMultipleService/transaction-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase6_Eureka/account-service/src/main/java" charset="UTF-8" />
@@ -12,6 +19,11 @@
     <file url="file://$PROJECT_DIR$/Phase7_Api_gateway/api-gateway-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase7_Api_gateway/eureka-server/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase7_Api_gateway/transaction-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase8_Config_server/account-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase8_Config_server/api-gateway-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase8_Config_server/config-server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase8_Config_server/eureka-server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase8_Config_server/transaction-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase9_feign_resilience4j/account-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase9_feign_resilience4j/api-gateway-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase9_feign_resilience4j/config-server/src/main/java" charset="UTF-8" />
