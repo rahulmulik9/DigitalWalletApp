@@ -1,6 +1,5 @@
 package com.rahul.transaction_service.Idempotency;
 
-
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,16 +28,22 @@ public class IdempotencyKey {
     private String idempotencyKey;
 
     @Column(nullable = false)
-    private String requestHash; // hash of the transfer request body
+    private String requestHash;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Integer responseStatus;
+    @Builder.Default
+    private IdempotencyStatus status = IdempotencyStatus.PROCESSING; // NEW
 
-    @Column(nullable = false, columnDefinition = "TEXT")
-    private String responseBody; // JSON of the Transaction response, stored for replay
+    private Integer responseStatus; // nullable now — filled in only once COMPLETED
+
+    @Column(columnDefinition = "TEXT")
+    private String responseBody; // nullable now — filled in only once COMPLETED
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    private LocalDateTime completedAt; // NEW
 
     @PrePersist
     protected void onCreate() {

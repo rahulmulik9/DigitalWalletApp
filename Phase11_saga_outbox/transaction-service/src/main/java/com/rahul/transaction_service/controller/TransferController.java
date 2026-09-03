@@ -61,11 +61,11 @@
 //    }
 //}
 
-
 package com.rahul.transaction_service.controller;
 
 import com.rahul.transaction_service.Idempotency.IdempotencyKey;
 import com.rahul.transaction_service.Idempotency.IdempotencyService;
+import com.rahul.transaction_service.Idempotency.IdempotencyStatus;
 import com.rahul.transaction_service.dto.transfer.TransactionResponse;
 import com.rahul.transaction_service.dto.transfer.TransferRequest;
 import com.rahul.transaction_service.entity.Transaction;
@@ -95,38 +95,38 @@ public class TransferController {
             @Valid @RequestBody TransferRequest request,
             @RequestHeader("Idempotency-Key") String idempotencyKey) {
 
-        Optional<IdempotencyKey> existing = idempotencyService.checkExisting(idempotencyKey);
-        if (existing.isPresent()) {
-            IdempotencyKey record = existing.get();
+        // STEP 2.4 — try to claim this key FIRST, before any business logic
+        try {
+            //try to save key
+            idempotencyService.reserve(idempotencyKey, request);
+        } catch (DataIntegrityViolationException e) {
+            // Someone already claimed this key — look at their record
+            IdempotencyKey existing = idempotencyService.checkExisting(idempotencyKey)
+                    .orElseThrow(); // must exist, since the insert just failed on its uniqueness
 
-            // NEW — Gap B: reject if the same key is reused for a different request
-            if (!idempotencyService.matchesOriginalRequest(record, request)) {
+            if (!idempotencyService.matchesOriginalRequest(existing, request)) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
                         "Idempotency-Key already used with a different request payload");
             }
 
+            if (existing.getStatus() == IdempotencyStatus.PROCESSING) {
+                // The other request hasn't finished yet — don't risk a double-transfer
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "A request with this Idempotency-Key is already being processed");
+            }
+
+            // COMPLETED — safe to return the cached response
             TransactionResponse cachedResponse =
-                    idempotencyService.deserializeResponse(record.getResponseBody(), TransactionResponse.class);
-            return ResponseEntity.status(record.getResponseStatus()).body(cachedResponse);
+                    idempotencyService.deserializeResponse(existing.getResponseBody(), TransactionResponse.class);
+            return ResponseEntity.status(existing.getResponseStatus()).body(cachedResponse);
         }
 
+        // We successfully reserved the key — safe to proceed, no one else can be here concurrently
         Long callerUserId = securityUtils.getCurrentUserId();
         Transaction txn = transferService.transfer(request, callerUserId);
         TransactionResponse response = toResponse(txn);
 
-        // NEW — Gap A: catch the race — DB's unique constraint is the real guard,
-        // this try-catch just handles it gracefully instead of crashing with a 500
-        try {
-            idempotencyService.save(idempotencyKey, request, HttpStatus.CREATED.value(), response);
-        } catch (DataIntegrityViolationException e) {
-            // Another concurrent request with the same key won the race and saved first.
-            // The transfer we just did is now effectively a duplicate execution —
-            // this is the one real limitation of choosing "process, then save" ordering.
-            // Returning our own result here is still safe: the OTHER request's transfer
-            // already happened too, so this pattern doesn't fully cover simultaneous funds
-            // movement — mitigated in Step 3 by combining this with the Saga's own dedup.
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        }
+        idempotencyService.complete(idempotencyKey, HttpStatus.CREATED.value(), response);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
