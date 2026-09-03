@@ -6,6 +6,13 @@
       <list>
         <option value="$PROJECT_DIR$/DigitalWallet/pom.xml" />
         <option value="$PROJECT_DIR$/Phase10_Kafka/fraud-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase11_saga_outbox/account-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase11_saga_outbox/api-gateway-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase11_saga_outbox/config-server/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase11_saga_outbox/eureka-server/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase11_saga_outbox/monitoring-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase11_saga_outbox/notification-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase11_saga_outbox/transaction-service/pom.xml" />
       </list>
     </option>
   </component>

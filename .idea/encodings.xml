@@ -10,6 +10,13 @@
     <file url="file://$PROJECT_DIR$/Phase10_Kafka/monitoring-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase10_Kafka/notification-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase10_Kafka/transaction-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase11_saga_outbox/account-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase11_saga_outbox/api-gateway-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase11_saga_outbox/config-server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase11_saga_outbox/eureka-server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase11_saga_outbox/monitoring-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase11_saga_outbox/notification-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase11_saga_outbox/transaction-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase5_SimpleMultipleService/account-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase5_SimpleMultipleService/transaction-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase6_Eureka/account-service/src/main/java" charset="UTF-8" />
