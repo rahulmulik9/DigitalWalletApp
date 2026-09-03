@@ -22,14 +22,14 @@ public class TransferController {
 
     private final TransferService transferService;
     private final SecurityUtils securityUtils;
-    private final IdempotencyService idempotencyService; // NEW
+    private final IdempotencyService idempotencyService;
 
     @PostMapping("/transfers")
     public ResponseEntity<TransactionResponse> transfer(
             @Valid @RequestBody TransferRequest request,
-            @RequestHeader("Idempotency-Key") String idempotencyKey) { // NEW
+            @RequestHeader("Idempotency-Key") String idempotencyKey) {
 
-        // NEW — check before doing any business logic
+        // STEP 2.2 — check before processing
         Optional<IdempotencyKey> existing = idempotencyService.checkExisting(idempotencyKey);
         if (existing.isPresent()) {
             IdempotencyKey record = existing.get();
@@ -40,7 +40,12 @@ public class TransferController {
 
         Long callerUserId = securityUtils.getCurrentUserId();
         Transaction txn = transferService.transfer(request, callerUserId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(txn));
+        TransactionResponse response = toResponse(txn);
+
+        // STEP 2.3 — save the key + response so a future duplicate is caught
+        idempotencyService.save(idempotencyKey, request, HttpStatus.CREATED.value(), response);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     private TransactionResponse toResponse(Transaction txn) {
