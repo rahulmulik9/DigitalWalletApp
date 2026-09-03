@@ -1,0 +1,14 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: config-server
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://github.com/rahulmulik9/payflow-config-repo.git
+#          uri: file:///D:/Coding/DigitalWalletApp_Config/payflow-config-repo   #for local
+          default-label: master
+          clone-on-start: true
