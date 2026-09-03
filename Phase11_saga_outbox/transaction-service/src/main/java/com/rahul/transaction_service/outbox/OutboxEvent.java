@@ -32,7 +32,6 @@ public class OutboxEvent {
     @Column(nullable = false)
     private String eventType;       // e.g. "TransferInitiated"
 
-    @Lob
     @Column(nullable = false, columnDefinition = "TEXT")
     private String payload;         // JSON string of the event body
 

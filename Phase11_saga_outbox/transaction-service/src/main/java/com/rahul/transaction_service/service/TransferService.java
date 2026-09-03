@@ -5,6 +5,8 @@ import com.rahul.transaction_service.dto.transfer.TransferRequest;
 import com.rahul.transaction_service.dto.wallet.WalletResponse;
 import com.rahul.transaction_service.entity.*;
 import com.rahul.transaction_service.event.TransferEvent;
+import com.rahul.transaction_service.outbox.OutboxService;
+import com.rahul.transaction_service.outbox.TransferInitiatedPayload;
 import com.rahul.transaction_service.producer.TransferEventProducer;
 import com.rahul.transaction_service.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,70 +21,73 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class TransferService {
 
-    private final TransactionRepository transactionRepository;
-    private final AccountServiceClient accountServiceClient;
-    private final TransferEventProducer transferEventProducer; // NEW
+
     /**
      * Moves money between two wallets. Both legs succeed or both roll back —
      * Transactional is what guarantees that here.
-     *
+     * <p>
      * NOTE: this is the single-database, ACID version of a transfer. Once the
      * system is split across services (Phase 5+), a plain @Transactional can no
      * longer span both wallets, and this logic gets replaced by a Saga — that's
      * the whole point of Phase 11. Don't skip understanding *why* this simple
      * version works before moving on.
-
-    @Transactional
-    public Transaction transfer(TransferRequest request, String callerEmail) {   // CHANGED — added callerEmail
-        if (request.getFromWalletId().equals(request.getToWalletId())) {
-            throw new IllegalArgumentException("Cannot transfer to the same wallet");
-        }
-
-        Wallet fromWallet = walletRepository.findById(request.getFromWalletId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Source wallet not found: " + request.getFromWalletId()));
-
-        if (!fromWallet.getUser().getEmail().equals(callerEmail)) {   // NEW
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied: source wallet does not belong to you");
-        }
-
-        Wallet toWallet = walletRepository.findById(request.getToWalletId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Destination wallet not found: " + request.getToWalletId()));
-
-        if (fromWallet.getBalance().compareTo(request.getAmount()) < 0) {
-            throw new InsufficientBalanceException(
-                    "Insufficient balance in wallet: " + fromWallet.getId());
-        }
-
-        fromWallet.setBalance(fromWallet.getBalance().subtract(request.getAmount()));
-        toWallet.setBalance(toWallet.getBalance().add(request.getAmount()));
-
-        walletRepository.save(fromWallet);
-        walletRepository.save(toWallet);
-
-        Transaction txn = Transaction.builder()
-                .fromWallet(fromWallet)
-                .toWallet(toWallet)
-                .amount(request.getAmount())
-                .type(TransactionType.TRANSFER)
-                .status(TransactionStatus.PENDING)
-                .build();
-
-
-        LedgerEntry debit = LedgerEntry.builder()
-                .wallet(fromWallet).transaction(txn).amount(request.getAmount())
-                .type(LedgerEntryType.DEBIT).description("Transfer to wallet " + toWallet.getId()).build();
-        LedgerEntry credit = LedgerEntry.builder()
-                .wallet(toWallet).transaction(txn).amount(request.getAmount())
-                .type(LedgerEntryType.CREDIT).description("Transfer from wallet " + fromWallet.getId()).build();
-        txn.addLedgerEntry(debit);
-        txn.addLedgerEntry(credit);
-        txn.setStatus(TransactionStatus.SUCCESS);
-
-        return transactionRepository.save(txn);
-    }
+     *
+     * @Transactional public Transaction transfer(TransferRequest request, String callerEmail) {   // CHANGED — added callerEmail
+     * if (request.getFromWalletId().equals(request.getToWalletId())) {
+     * throw new IllegalArgumentException("Cannot transfer to the same wallet");
+     * }
+     * <p>
+     * Wallet fromWallet = walletRepository.findById(request.getFromWalletId())
+     * .orElseThrow(() -> new ResourceNotFoundException(
+     * "Source wallet not found: " + request.getFromWalletId()));
+     * <p>
+     * if (!fromWallet.getUser().getEmail().equals(callerEmail)) {   // NEW
+     * throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied: source wallet does not belong to you");
+     * }
+     * <p>
+     * Wallet toWallet = walletRepository.findById(request.getToWalletId())
+     * .orElseThrow(() -> new ResourceNotFoundException(
+     * "Destination wallet not found: " + request.getToWalletId()));
+     * <p>
+     * if (fromWallet.getBalance().compareTo(request.getAmount()) < 0) {
+     * throw new InsufficientBalanceException(
+     * "Insufficient balance in wallet: " + fromWallet.getId());
+     * }
+     * <p>
+     * fromWallet.setBalance(fromWallet.getBalance().subtract(request.getAmount()));
+     * toWallet.setBalance(toWallet.getBalance().add(request.getAmount()));
+     * <p>
+     * walletRepository.save(fromWallet);
+     * walletRepository.save(toWallet);
+     * <p>
+     * Transaction txn = Transaction.builder()
+     * .fromWallet(fromWallet)
+     * .toWallet(toWallet)
+     * .amount(request.getAmount())
+     * .type(TransactionType.TRANSFER)
+     * .status(TransactionStatus.PENDING)
+     * .build();
+     * <p>
+     * <p>
+     * LedgerEntry debit = LedgerEntry.builder()
+     * .wallet(fromWallet).transaction(txn).amount(request.getAmount())
+     * .type(LedgerEntryType.DEBIT).description("Transfer to wallet " + toWallet.getId()).build();
+     * LedgerEntry credit = LedgerEntry.builder()
+     * .wallet(toWallet).transaction(txn).amount(request.getAmount())
+     * .type(LedgerEntryType.CREDIT).description("Transfer from wallet " + fromWallet.getId()).build();
+     * txn.addLedgerEntry(debit);
+     * txn.addLedgerEntry(credit);
+     * txn.setStatus(TransactionStatus.SUCCESS);
+     * <p>
+     * return transactionRepository.save(txn);
+     * }
      */
+
+    private final TransactionRepository transactionRepository;
+    private final AccountServiceClient accountServiceClient;
+    private final TransferEventProducer transferEventProducer; //
+    private final OutboxService outboxService;
+
     @Transactional
     public Transaction transfer(TransferRequest request, Long callerUserId) {
         if (request.getFromWalletId().equals(request.getToWalletId())) {
@@ -97,9 +102,6 @@ public class TransferService {
 
         WalletResponse toWallet = accountServiceClient.getWallet(request.getToWalletId());
 
-        // debit/credit calls hit Account Service, which owns balance validation
-        // and mutation. If balance is insufficient, Account Service returns 409
-        // and AccountServiceClient throws InsufficientBalanceException here.
         accountServiceClient.debit(fromWallet.getId(), request.getAmount());
         accountServiceClient.credit(toWallet.getId(), request.getAmount());
 
@@ -111,6 +113,7 @@ public class TransferService {
                 .status(TransactionStatus.PENDING)
                 .build();
 
+        // Existing direct Kafka publish — UNTOUCHED for now, Step 1.3 replaces this
         transferEventProducer.publish(TransferEvent.builder()
                 .eventType("INITIATED")
                 .fromWalletId(request.getFromWalletId())
@@ -129,11 +132,25 @@ public class TransferService {
         txn.addLedgerEntry(credit);
         txn.setStatus(TransactionStatus.SUCCESS);
 
-        Transaction savedTxn = transactionRepository.save(txn);   // ⬅ MOVED UP — id is generated here now
+        Transaction savedTxn = transactionRepository.save(txn);
+
+        // NEW — outbox write, same transaction as the save above
+        outboxService.saveEvent(
+                "TRANSACTION",
+                String.valueOf(savedTxn.getId()),
+                "TransferInitiated",
+                TransferInitiatedPayload.builder()
+                        .transactionId(savedTxn.getId())
+                        .fromWalletId(fromWallet.getId())
+                        .toWalletId(toWallet.getId())
+                        .amount(request.getAmount())
+                        .timestamp(Instant.now())
+                        .build()
+        );
 
         transferEventProducer.publish(TransferEvent.builder()
                 .eventType("COMPLETED")
-                .transactionId(savedTxn.getId())                  // ⬅ now a real, non-null id
+                .transactionId(savedTxn.getId())
                 .fromWalletId(request.getFromWalletId())
                 .toWalletId(request.getToWalletId())
                 .amount(request.getAmount())
