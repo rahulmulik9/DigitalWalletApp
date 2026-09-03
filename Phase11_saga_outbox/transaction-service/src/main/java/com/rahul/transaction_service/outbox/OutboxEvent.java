@@ -24,16 +24,16 @@ public class OutboxEvent {
     private Long id;
 
     @Column(nullable = false)
-    private String aggregateType;   // e.g. "TRANSFER"
+    private String aggregateType;
 
     @Column(nullable = false)
-    private String aggregateId;     // e.g. transfer's UUID/ID as string
+    private String aggregateId;
 
     @Column(nullable = false)
-    private String eventType;       // e.g. "TransferInitiated"
+    private String eventType;
 
     @Column(nullable = false, columnDefinition = "TEXT")
-    private String payload;         // JSON string of the event body
+    private String payload;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -44,6 +44,10 @@ public class OutboxEvent {
     private LocalDateTime createdAt;
 
     private LocalDateTime sentAt;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private int retryCount = 0;   // NEW
 
     @PrePersist
     protected void onCreate() {

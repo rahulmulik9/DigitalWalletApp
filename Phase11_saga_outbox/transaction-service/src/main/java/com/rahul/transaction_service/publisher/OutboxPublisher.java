@@ -17,16 +17,18 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class OutboxPublisher {
 
-    private static final String OUTBOX_TOPIC = "outbox-events"; // ONE shared topic
+    private static final String OUTBOX_TOPIC = "outbox-events";
+    private static final int MAX_RETRY_COUNT = 5; // NEW
 
     private final OutboxEventRepository outboxEventRepository;
     private final KafkaTemplate<String, String> kafkaTemplate;
-    private final ObjectMapper objectMapper; // NEW — needed to build the wrapper JSON
+    private final ObjectMapper objectMapper;
 
     @Scheduled(fixedDelay = 5000)
     @Transactional
@@ -41,13 +43,12 @@ public class OutboxPublisher {
         log.info("Found {} pending outbox event(s) to publish", pendingEvents.size());
 
         for (OutboxEvent event : pendingEvents) {
-            String message = buildMessage(event); // CHANGED — was event.getPayload() directly
+            String message = buildMessage(event);
 
             kafkaTemplate.send(OUTBOX_TOPIC, event.getAggregateId(), message)
                     .whenComplete((result, ex) -> {
                         if (ex != null) {
-                            log.error("Failed to publish outbox event id={} eventType={}",
-                                    event.getId(), event.getEventType(), ex);
+                            handleFailure(event, ex); // CHANGED — was just a log line before
                         } else {
                             log.info("Published outbox event id={} eventType={} to partition={}",
                                     event.getId(), event.getEventType(),
@@ -61,14 +62,28 @@ public class OutboxPublisher {
         }
     }
 
-    // Wraps the stored payload JSON with its eventType, so any consumer reading
-    // the shared "outbox-events" topic can tell what kind of event this is.
+    // NEW — pulled failure handling into its own method
+    private void handleFailure(OutboxEvent event, Throwable ex) {
+        int newRetryCount = event.getRetryCount() + 1;
+        event.setRetryCount(newRetryCount);
+
+        if (newRetryCount >= MAX_RETRY_COUNT) {
+            event.setStatus(OutboxStatus.FAILED);
+            log.error("Outbox event id={} eventType={} failed after {} attempts — marking FAILED",
+                    event.getId(), event.getEventType(), newRetryCount, ex);
+        } else {
+            // stays PENDING — will be retried on the next poll
+            log.warn("Outbox event id={} eventType={} failed (attempt {}/{}), will retry",
+                    event.getId(), event.getEventType(), newRetryCount, MAX_RETRY_COUNT, ex);
+        }
+
+        outboxEventRepository.save(event);
+    }
+
     @SneakyThrows
     private String buildMessage(OutboxEvent event) {
         Map<String, Object> wrapper = new LinkedHashMap<>();
         wrapper.put("eventType", event.getEventType());
-        // parse the stored payload string back into a generic Map/Object,
-        // so it nests as real JSON, not as an escaped string
         Object parsedPayload = objectMapper.readValue(event.getPayload(), Object.class);
         wrapper.put("data", parsedPayload);
 
