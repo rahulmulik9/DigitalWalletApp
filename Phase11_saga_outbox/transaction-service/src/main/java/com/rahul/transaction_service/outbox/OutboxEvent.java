@@ -1,5 +1,6 @@
-package com.payflow.transaction.outbox;
+package com.rahul.transaction_service.outbox;
 
+import com.rahul.transaction_service.outbox.OutboxStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
