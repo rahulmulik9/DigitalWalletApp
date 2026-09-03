@@ -26,7 +26,7 @@ public class IdempotencyService {
     // Even if two requests both try to insert at the literal same microsecond,
     // the database guarantees only one insert can physically succeed
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public IdempotencyKey reserve(String idempotencyKey, Object request) {
+    public IdempotencyKey registerProcessing(String idempotencyKey, Object request) {
         IdempotencyKey record = IdempotencyKey.builder()
                 .idempotencyKey(idempotencyKey)
                 .requestHash(hashRequest(request))

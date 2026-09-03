@@ -98,7 +98,7 @@ public class TransferController {
         // STEP 2.4 — try to claim this key FIRST, before any business logic
         try {
             //try to save key
-            idempotencyService.reserve(idempotencyKey, request);
+            idempotencyService.registerProcessing(idempotencyKey, request);
         } catch (DataIntegrityViolationException e) {
             // Someone already claimed this key — look at their record
             IdempotencyKey existing = idempotencyService.checkExisting(idempotencyKey)
