@@ -1,7 +1,7 @@
 {
   "info": {
-    "_postman_id": "7a2c9e14-5f3b-4d21-9c8a-3e1f6b8d4a90",
-    "name": "Phase 7 (API Gateway)",
+    "_postman_id": "b958a125-c09d-4ac9-af72-96ca92b44bed",
+    "name": "Phase 7-8(API Gateway and config server)",
     "description": "Complete Postman collection for the DigitalWallet application, updated for Phase 7. All requests now go through the API Gateway on http://localhost:8080 instead of hitting account-service (8081) or transaction-service (8082) directly. The gateway routes /api/users/**, /api/auth/**, /api/wallets/**, /api/admin/** to account-service, and /api/transactions/**, /api/transfers/**, /api/beneficiaries/** to transaction-service. Note: transaction history endpoints moved from /api/wallets/{id}/transactions to /api/transactions/wallet/{id} to remove a path collision with account-service's /api/wallets/** routes. Seeded local users: rahul@gmail.com and admin@gmail.com; both use password123. Rahul owns wallet 1; wallets 2 and 3 belong to other users.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "29215909"
@@ -793,10 +793,6 @@
       "value": "http://localhost:8082"
     },
     {
-      "key": "accessToken",
-      "value": ""
-    },
-    {
       "key": "walletId",
       "value": "1"
     },
@@ -813,10 +809,6 @@
       "value": ""
     },
     {
-      "key": "refreshToken",
-      "value": ""
-    },
-    {
       "key": "adminAccessToken",
       "value": ""
     },
@@ -827,6 +819,14 @@
     {
       "key": "newUserEmail",
       "value": "postman-test@example.com"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
     }
   ]
 }
