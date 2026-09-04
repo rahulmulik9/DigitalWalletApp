@@ -36,7 +36,6 @@ public class OutboxPublisher {
         List<OutboxEvent> pendingEvents = outboxEventRepository.findByStatusOrderByCreatedAtAsc(OutboxStatus.PENDING);
 
         if (pendingEvents.isEmpty()) {
-            log.info("No result found to publish");
             return;
         }
 
