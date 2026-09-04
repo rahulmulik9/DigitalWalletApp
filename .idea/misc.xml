@@ -17,6 +17,9 @@
         <option value="$PROJECT_DIR$/Phase_12_saga/eureka-server/pom.xml" />
         <option value="$PROJECT_DIR$/Phase_12_saga/account-service/pom.xml" />
         <option value="$PROJECT_DIR$/Phase_12_saga/transaction-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase_12_saga/monitoring-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase_12_saga/notification-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase_12_saga/api-gateway-service/pom.xml" />
       </list>
     </option>
   </component>
