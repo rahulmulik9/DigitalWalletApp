@@ -33,8 +33,7 @@ public class OutboxPublisher {
     @Scheduled(fixedDelay = 5000)
     @Transactional
     public void publishPendingEvents() {
-        List<OutboxEvent> pendingEvents =
-                outboxEventRepository.findByStatusOrderByCreatedAtAsc(OutboxStatus.PENDING);
+        List<OutboxEvent> pendingEvents = outboxEventRepository.findByStatusOrderByCreatedAtAsc(OutboxStatus.PENDING);
 
         if (pendingEvents.isEmpty()) {
             log.info("No result found to publish");
