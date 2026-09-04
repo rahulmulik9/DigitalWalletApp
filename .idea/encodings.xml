@@ -10,13 +10,13 @@
     <file url="file://$PROJECT_DIR$/Phase10_Kafka/monitoring-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase10_Kafka/notification-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase10_Kafka/transaction-service/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/Phase11_outbox_Idempotency/account-service/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/Phase11_outbox_Idempotency/api-gateway-service/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/Phase11_outbox_Idempotency/config-server/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/Phase11_outbox_Idempotency/eureka-server/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/Phase11_outbox_Idempotency/monitoring-service/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/Phase11_outbox_Idempotency/notification-service/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/Phase11_outbox_Idempotency/transaction-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase11_outbox_indempotency/account-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase11_outbox_indempotency/api-gateway-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase11_outbox_indempotency/config-server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase11_outbox_indempotency/eureka-server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase11_outbox_indempotency/monitoring-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase11_outbox_indempotency/notification-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase11_outbox_indempotency/transaction-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase5_SimpleMultipleService/account-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase5_SimpleMultipleService/transaction-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase6_Eureka/account-service/src/main/java" charset="UTF-8" />

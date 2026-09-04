@@ -1,0 +1,9 @@
+spring:
+  config:
+    import: "optional:configserver:http://config-server:8888"
+  kafka:
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.rahul.transaction_service.event,com.rahul.notification_service.event"
