@@ -1,9 +1,0 @@
-spring:
-  application:
-    name: account-service
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health, refresh
