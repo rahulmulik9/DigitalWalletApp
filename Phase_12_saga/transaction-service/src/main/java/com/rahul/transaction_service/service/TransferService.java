@@ -102,8 +102,8 @@ public class TransferService {
 
         WalletResponse toWallet = accountServiceClient.getWallet(request.getToWalletId());
 
-        accountServiceClient.debit(fromWallet.getId(), request.getAmount());
-        accountServiceClient.credit(toWallet.getId(), request.getAmount());
+        //accountServiceClient.debit(fromWallet.getId(), request.getAmount());
+        //accountServiceClient.credit(toWallet.getId(), request.getAmount());
 
         Transaction txn = Transaction.builder()
                 .fromWalletId(fromWallet.getId())

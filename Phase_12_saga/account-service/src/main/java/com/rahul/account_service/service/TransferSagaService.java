@@ -3,10 +3,7 @@ package com.rahul.account_service.service;
 import com.rahul.account_service.entity.Wallet;
 import com.rahul.account_service.exception.InsufficientBalanceException;
 import com.rahul.account_service.exception.ResourceNotFoundException;
-import com.rahul.account_service.outbox.CreditResultPayload;
-import com.rahul.account_service.outbox.DebitResultPayload;
-import com.rahul.account_service.outbox.TransferInitiatedPayload;
-import com.rahul.account_service.outbox.OutboxService;
+import com.rahul.account_service.outbox.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -101,5 +98,27 @@ public class TransferSagaService {
 
             log.warn("Credit failed for transactionId={} reason={}", payload.getTransactionId(), ex.getMessage());
         }
+    }
+
+    @Transactional
+    public void handleCreditFailed(CreditResultPayload payload) {
+        Wallet fromWallet = walletService.getWallet(payload.getFromWalletId());
+        walletService.deposit(fromWallet, payload.getAmount()); // refund — undo the earlier debit
+
+        outboxService.saveEvent(
+                "TRANSACTION",
+                String.valueOf(payload.getTransactionId()),
+                "CompensationCompleted",
+                CompensationCompletedPayload.builder()
+                        .transactionId(payload.getTransactionId())
+                        .fromWalletId(payload.getFromWalletId())
+                        .toWalletId(payload.getToWalletId())
+                        .amount(payload.getAmount())
+                        .timestamp(Instant.now())
+                        .build()
+        );
+
+        log.info("Compensation completed for transactionId={} — refunded {} to walletId={}",
+                payload.getTransactionId(), payload.getAmount(), payload.getFromWalletId());
     }
 }
