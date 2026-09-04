@@ -25,14 +25,14 @@ public class TransferService {
     /**
      * Moves money between two wallets. Both legs succeed or both roll back —
      * Transactional is what guarantees that here.
-     * <p>
+     * <
      * NOTE: this is the single-database, ACID version of a transfer. Once the
      * system is split across services (Phase 5+), a plain @Transactional can no
      * longer span both wallets, and this logic gets replaced by a Saga — that's
      * the whole point of Phase 11. Don't skip understanding *why* this simple
      * version works before moving on.
-     *
-     * @Transactional public Transaction transfer(TransferRequest request, String callerEmail) {   // CHANGED — added callerEmail
+     * <p>
+     * Transactional public Transaction transfer(TransferRequest request, String callerEmail) {   // CHANGED — added callerEmail
      * if (request.getFromWalletId().equals(request.getToWalletId())) {
      * throw new IllegalArgumentException("Cannot transfer to the same wallet");
      * }
@@ -68,7 +68,6 @@ public class TransferService {
      * .status(TransactionStatus.PENDING)
      * .build();
      * <p>
-     * <p>
      * LedgerEntry debit = LedgerEntry.builder()
      * .wallet(fromWallet).transaction(txn).amount(request.getAmount())
      * .type(LedgerEntryType.DEBIT).description("Transfer to wallet " + toWallet.getId()).build();
@@ -83,6 +82,119 @@ public class TransferService {
      * }
      */
 
+
+    //================== AFTER (Phase 5 — two services, two databases)
+  /*  private final TransactionRepository transactionRepository;
+    private final AccountServiceClient accountServiceClient;
+
+    @Transactional
+    public Transaction transfer(TransferRequest request, Long callerUserId) {
+        if (request.getFromWalletId().equals(request.getToWalletId())) {
+            throw new IllegalArgumentException("Cannot transfer to the same wallet");
+        }
+
+        WalletResponse fromWallet = accountServiceClient.getWallet(request.getFromWalletId());
+
+        if (!fromWallet.getUserId().equals(callerUserId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied: source wallet does not belong to you");
+        }
+
+        WalletResponse toWallet = accountServiceClient.getWallet(request.getToWalletId());
+
+        accountServiceClient.debit(fromWallet.getId(), request.getAmount());
+        accountServiceClient.credit(toWallet.getId(), request.getAmount());
+
+        Transaction txn = Transaction.builder()
+                .fromWalletId(fromWallet.getId())
+                .toWalletId(toWallet.getId())
+                .amount(request.getAmount())
+                .type(TransactionType.TRANSFER)
+                .status(TransactionStatus.PENDING)
+                .build();
+
+        LedgerEntry debit = LedgerEntry.builder()
+                .walletId(fromWallet.getId()).transaction(txn).amount(request.getAmount())
+                .type(LedgerEntryType.DEBIT).description("Transfer to wallet " + toWallet.getId()).build();
+        LedgerEntry credit = LedgerEntry.builder()
+                .walletId(toWallet.getId()).transaction(txn).amount(request.getAmount())
+                .type(LedgerEntryType.CREDIT).description("Transfer from wallet " + fromWallet.getId()).build();
+        txn.addLedgerEntry(debit);
+        txn.addLedgerEntry(credit);
+        txn.setStatus(TransactionStatus.SUCCESS);
+
+        Transaction savedTxn = transactionRepository.save(txn);
+
+        return savedTxn;
+    }
+}
+*/
+
+    /*
+     * ============================================================
+     * BEFORE (Phase 4 — single DB, single @Transactional)
+     * ============================================================
+     *
+     * 1. Client
+     *       |
+     *       v
+     * 2. TransferService
+     *       |
+     *       | debit source wallet (local)
+     *       | credit destination wallet (local)
+     *       | create transaction + ledger entries (local)
+     *       v
+     * 3. ONE database, ONE @Transactional
+     *       |
+     *       v
+     * 4. All-or-nothing commit/rollback — guaranteed by the DB
+     *
+     * ============================================================
+     * AFTER (Phase 5 — two services, two databases)
+     * ============================================================
+     *
+     * 1. Client
+     *       |
+     *       v
+     * 2. Transaction Service
+     *       |
+     *       | debit source wallet
+     *       v
+     * 3. Account Service
+     *       |
+     *       v
+     * 4. account_db
+     *       |
+     *       | success
+     *       v
+     * 5. Transaction Service
+     *       |
+     *       | credit destination wallet
+     *       v
+     * 6. Account Service
+     *       |
+     *       v
+     * 7. account_db
+     *       |
+     *       | success
+     *       v
+     * 8. Transaction Service
+     *       |
+     *       | create transaction + ledger entries
+     *       v
+     * 9. transaction_db
+     *
+     * NOTE: @Transactional on this method now ONLY protects step 9
+     * (the local transaction_db write). It does NOT make steps 2-7
+     * atomic — if debit (step 2-4) succeeds and credit (step 5-7)
+     * fails, the source wallet is already short ₹X with nothing to
+     * roll it back. This is the exact problem Phase 11 (Saga +
+     * Compensation + Idempotency + Outbox) exists to solve. We are
+     * NOT fixing it here — this is the deliberate lesson of Phase 5.
+     * ============================================================
+     */
+
+
+    //======= Phase 12 saga
     private final TransactionRepository transactionRepository;
     private final AccountServiceClient accountServiceClient;
     private final TransferEventProducer transferEventProducer; //
@@ -100,128 +212,30 @@ public class TransferService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied: source wallet does not belong to you");
         }
 
-        WalletResponse toWallet = accountServiceClient.getWallet(request.getToWalletId());
-
-        //accountServiceClient.debit(fromWallet.getId(), request.getAmount());
-        //accountServiceClient.credit(toWallet.getId(), request.getAmount());
-
         Transaction txn = Transaction.builder()
-                .fromWalletId(fromWallet.getId())
-                .toWalletId(toWallet.getId())
+                .fromWalletId(request.getFromWalletId())
+                .toWalletId(request.getToWalletId())
                 .amount(request.getAmount())
                 .type(TransactionType.TRANSFER)
                 .status(TransactionStatus.PENDING)
                 .build();
 
-        // Existing direct Kafka publish — UNTOUCHED for now, Step 1.3 replaces this
-        transferEventProducer.publish(TransferEvent.builder()
-                .eventType("INITIATED")
-                .fromWalletId(request.getFromWalletId())
-                .toWalletId(request.getToWalletId())
-                .amount(request.getAmount())
-                .timestamp(Instant.now())
-                .build());
-
-        LedgerEntry debit = LedgerEntry.builder()
-                .walletId(fromWallet.getId()).transaction(txn).amount(request.getAmount())
-                .type(LedgerEntryType.DEBIT).description("Transfer to wallet " + toWallet.getId()).build();
-        LedgerEntry credit = LedgerEntry.builder()
-                .walletId(toWallet.getId()).transaction(txn).amount(request.getAmount())
-                .type(LedgerEntryType.CREDIT).description("Transfer from wallet " + fromWallet.getId()).build();
-        txn.addLedgerEntry(debit);
-        txn.addLedgerEntry(credit);
-        txn.setStatus(TransactionStatus.SUCCESS);
-
         Transaction savedTxn = transactionRepository.save(txn);
 
-        // NEW — outbox write, same transaction as the save above
         outboxService.saveEvent(
                 "TRANSACTION",
                 String.valueOf(savedTxn.getId()),
                 "TransferInitiated",
                 TransferInitiatedPayload.builder()
                         .transactionId(savedTxn.getId())
-                        .fromWalletId(fromWallet.getId())
-                        .toWalletId(toWallet.getId())
+                        .fromWalletId(request.getFromWalletId())
+                        .toWalletId(request.getToWalletId())
                         .amount(request.getAmount())
                         .timestamp(Instant.now())
                         .build()
         );
 
-        transferEventProducer.publish(TransferEvent.builder()
-                .eventType("COMPLETED")
-                .transactionId(savedTxn.getId())
-                .fromWalletId(request.getFromWalletId())
-                .toWalletId(request.getToWalletId())
-                .amount(request.getAmount())
-                .timestamp(Instant.now())
-                .build());
-
         return savedTxn;
     }
+
 }
-
-
-/*
- * ============================================================
- * BEFORE (Phase 4 — single DB, single @Transactional)
- * ============================================================
- *
- * 1. Client
- *       |
- *       v
- * 2. TransferService
- *       |
- *       | debit source wallet (local)
- *       | credit destination wallet (local)
- *       | create transaction + ledger entries (local)
- *       v
- * 3. ONE database, ONE @Transactional
- *       |
- *       v
- * 4. All-or-nothing commit/rollback — guaranteed by the DB
- *
- * ============================================================
- * AFTER (Phase 5 — two services, two databases)
- * ============================================================
- *
- * 1. Client
- *       |
- *       v
- * 2. Transaction Service
- *       |
- *       | debit source wallet
- *       v
- * 3. Account Service
- *       |
- *       v
- * 4. account_db
- *       |
- *       | success
- *       v
- * 5. Transaction Service
- *       |
- *       | credit destination wallet
- *       v
- * 6. Account Service
- *       |
- *       v
- * 7. account_db
- *       |
- *       | success
- *       v
- * 8. Transaction Service
- *       |
- *       | create transaction + ledger entries
- *       v
- * 9. transaction_db
- *
- * NOTE: @Transactional on this method now ONLY protects step 9
- * (the local transaction_db write). It does NOT make steps 2-7
- * atomic — if debit (step 2-4) succeeds and credit (step 5-7)
- * fails, the source wallet is already short ₹X with nothing to
- * roll it back. This is the exact problem Phase 11 (Saga +
- * Compensation + Idempotency + Outbox) exists to solve. We are
- * NOT fixing it here — this is the deliberate lesson of Phase 5.
- * ============================================================
- */
