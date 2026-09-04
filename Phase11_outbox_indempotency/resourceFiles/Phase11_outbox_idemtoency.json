@@ -1,7 +1,7 @@
 {
   "info": {
-    "_postman_id": "b958a125-c09d-4ac9-af72-96ca92b44bed",
-    "name": "Phase 7-8(API Gateway and config server)",
+    "_postman_id": "4e80e513-d21a-414b-9e67-29942db3039f",
+    "name": "Phase11_outbox_indempotency",
     "description": "Complete Postman collection for the DigitalWallet application, updated for Phase 7. All requests now go through the API Gateway on http://localhost:8080 instead of hitting account-service (8081) or transaction-service (8082) directly. The gateway routes /api/users/**, /api/auth/**, /api/wallets/**, /api/admin/** to account-service, and /api/transactions/**, /api/transfers/**, /api/beneficiaries/** to transaction-service. Note: transaction history endpoints moved from /api/wallets/{id}/transactions to /api/transactions/wallet/{id} to remove a path collision with account-service's /api/wallets/** routes. Seeded local users: rahul@gmail.com and admin@gmail.com; both use password123. Rahul owns wallet 1; wallets 2 and 3 belong to other users.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "29215909"
@@ -395,15 +395,7 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test('Transfer is created', function () {",
-                      "    pm.response.to.have.status(201);",
-                      "});",
-                      "",
-                      "const transaction = pm.response.json();",
-                      "pm.expect(transaction.type).to.eql('TRANSFER');",
-                      "pm.expect(transaction.status).to.eql('SUCCESS');",
-                      "pm.expect(transaction.fromWalletId).to.eql(Number(pm.collectionVariables.get('walletId')));",
-                      "pm.expect(transaction.toWalletId).to.eql(Number(pm.collectionVariables.get('otherWalletId')));"
+                      "pm.test('Transfer is created', function () {\n    pm.response.to.have.status(201);\n});\n\nconst transaction = pm.response.json();\npm.expect(transaction.type).to.eql('TRANSFER');\npm.expect(transaction.status).to.eql('SUCCESS');\npm.expect(transaction.fromWalletId).to.eql(Number(pm.collectionVariables.get('walletId')));\npm.expect(transaction.toWalletId).to.eql(Number(pm.collectionVariables.get('otherWalletId')));"
                     ]
                   }
                 }
@@ -418,6 +410,10 @@
                   {
                     "key": "Authorization",
                     "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "test-key-001"
                   }
                 ],
                 "body": {
