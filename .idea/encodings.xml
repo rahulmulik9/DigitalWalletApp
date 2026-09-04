@@ -36,5 +36,9 @@
     <file url="file://$PROJECT_DIR$/Phase9_feign_resilience4j/config-server/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase9_feign_resilience4j/eureka-server/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Phase9_feign_resilience4j/transaction-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase_12_saga/account-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase_12_saga/config-server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase_12_saga/eureka-server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Phase_12_saga/transaction-service/src/main/java" charset="UTF-8" />
   </component>
 </project>
