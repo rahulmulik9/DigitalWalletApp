@@ -5,11 +5,13 @@ import com.rahul.transaction_service.dto.transfer.TransferRequest;
 import com.rahul.transaction_service.dto.wallet.WalletResponse;
 import com.rahul.transaction_service.entity.*;
 import com.rahul.transaction_service.event.TransferEvent;
+import com.rahul.transaction_service.exception.ResourceNotFoundException;
 import com.rahul.transaction_service.outbox.OutboxService;
 import com.rahul.transaction_service.outbox.TransferInitiatedPayload;
 import com.rahul.transaction_service.producer.TransferEventProducer;
 import com.rahul.transaction_service.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TransferService {
@@ -236,6 +239,33 @@ public class TransferService {
         );
 
         return savedTxn;
+    }
+
+    @Transactional
+    public void handleDebitFailed(Long transactionId) {
+        Transaction txn = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found: " + transactionId));
+        txn.setStatus(TransactionStatus.FAILED);
+        transactionRepository.save(txn);
+        log.info("Transaction {} marked FAILED (debit failed, nothing to compensate)", transactionId);
+    }
+
+    @Transactional
+    public void handleCreditCompleted(Long transactionId) {
+        Transaction txn = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found: " + transactionId));
+        txn.setStatus(TransactionStatus.SUCCESS);
+        transactionRepository.save(txn);
+        log.info("Transaction {} marked SUCCESS (both legs completed)", transactionId);
+    }
+
+    @Transactional
+    public void handleCompensationCompleted(Long transactionId) {
+        Transaction txn = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found: " + transactionId));
+        txn.setStatus(TransactionStatus.FAILED);
+        transactionRepository.save(txn);
+        log.info("Transaction {} marked FAILED (compensated — money safely returned)", transactionId);
     }
 
 }
