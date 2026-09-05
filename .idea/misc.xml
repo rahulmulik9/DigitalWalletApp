@@ -13,13 +13,13 @@
         <option value="$PROJECT_DIR$/Phase11_saga_outbox/monitoring-service/pom.xml" />
         <option value="$PROJECT_DIR$/Phase11_saga_outbox/notification-service/pom.xml" />
         <option value="$PROJECT_DIR$/Phase11_saga_outbox/transaction-service/pom.xml" />
-        <option value="$PROJECT_DIR$/Phase11_outbox_indempotency/api-gateway-service/pom.xml" />
-        <option value="$PROJECT_DIR$/Phase11_outbox_indempotency/config-server/pom.xml" />
-        <option value="$PROJECT_DIR$/Phase11_outbox_indempotency/eureka-server/pom.xml" />
-        <option value="$PROJECT_DIR$/Phase11_outbox_indempotency/monitoring-service/pom.xml" />
-        <option value="$PROJECT_DIR$/Phase11_outbox_indempotency/notification-service/pom.xml" />
-        <option value="$PROJECT_DIR$/Phase11_outbox_indempotency/transaction-service/pom.xml" />
-        <option value="$PROJECT_DIR$/Phase11_outbox_indempotency/account-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase_12_saga/config-server/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase_12_saga/eureka-server/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase_12_saga/account-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase_12_saga/transaction-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase_12_saga/monitoring-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase_12_saga/notification-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Phase_12_saga/api-gateway-service/pom.xml" />
       </list>
     </option>
   </component>
